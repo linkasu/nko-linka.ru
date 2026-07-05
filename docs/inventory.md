@@ -48,18 +48,31 @@ Running containers:
 ```text
 socks5-service-a    ghcr.io/ibakaidov/bakaidov-proxy-bot-service-a:sha-4078cdd   Up 2 months
 proxybot-postgres   postgres:16.9-bookworm                                       Up 2 months (healthy)
+nko-linka-mariadb   mariadb:11.4                                                 Up, healthy
 ```
 
 Observed ports:
 
 - `1080/tcp` and `20000-20255/udp` exposed by `socks5-service-a`.
 - `5432/tcp` exposed by `proxybot-postgres`.
+- `3306/tcp` exposed by `nko-linka-mariadb`.
 
-Current Docker volumes list is empty from `docker volume ls` output.
+MariaDB project path:
+
+```text
+/home/aacidov/nko-linka-db
+```
+
+MariaDB backup check:
+
+```text
+/home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260705T144735Z.sql.gz
+```
+
+Current Docker named volumes list is empty from `docker volume ls` output; MariaDB uses bind mounts in `/home/aacidov/nko-linka-db`.
 
 ## Gaps
 
-- MariaDB/MySQL for WordPress is not present yet.
 - YC Serverless Container is not created yet.
 - Object Storage bucket for uploads is not created yet.
 - TLS certificate for `nko-linka.ru` is not created yet.

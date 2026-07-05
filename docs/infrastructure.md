@@ -27,7 +27,7 @@ WordPress recommends:
 ## Database
 
 - MySQL/MariaDB in Docker on `37.230.192.57`.
-- Access over private or locked-down public network only.
+- Access currently exposed on `37.230.192.57:3306` for YC Serverless connectivity.
 - Credentials must be runtime secrets, never files in this repo.
 - Backups are mandatory before content migration and production updates.
 
