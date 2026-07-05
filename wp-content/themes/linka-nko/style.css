@@ -1,0 +1,134 @@
+/*
+Theme Name: Linka NKO
+Author: ANO Linka
+Description: Official WordPress theme for nko-linka.ru.
+Version: 0.1.0
+Text Domain: linka-nko
+*/
+
+:root {
+  --linka-teal: #0e7a83;
+  --linka-green: #9cc449;
+  --linka-ink: #17313a;
+  --linka-muted: #5b6b73;
+  --linka-bg: #f6fbfa;
+  --linka-card: #ffffff;
+  --linka-border: #d9e8e5;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  color: var(--linka-ink);
+  background: var(--linka-bg);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+a { color: var(--linka-teal); }
+a:focus { outline: 3px solid var(--linka-green); outline-offset: 3px; }
+
+.site-header,
+.site-footer {
+  background: var(--linka-card);
+  border-bottom: 1px solid var(--linka-border);
+}
+
+.site-footer { border-top: 1px solid var(--linka-border); border-bottom: 0; }
+
+.wrap {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.site-header .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 0;
+}
+
+.brand {
+  color: var(--linka-ink);
+  font-weight: 800;
+  text-decoration: none;
+  letter-spacing: .02em;
+}
+
+.main-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.main-nav a {
+  color: var(--linka-ink);
+  text-decoration: none;
+}
+
+.main-nav a:hover { color: var(--linka-teal); }
+
+.hero {
+  padding: 72px 0 56px;
+  background: linear-gradient(135deg, #ffffff 0%, #e9f7f5 100%);
+}
+
+.hero h1 {
+  max-width: 780px;
+  margin: 0 0 20px;
+  font-size: clamp(2.2rem, 6vw, 4.7rem);
+  line-height: 1.05;
+}
+
+.lead {
+  max-width: 760px;
+  color: var(--linka-muted);
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+}
+
+.content {
+  padding: 48px 0 72px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  padding: 24px;
+  background: var(--linka-card);
+  border: 1px solid var(--linka-border);
+  border-radius: 22px;
+}
+
+.button {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 12px 18px;
+  color: #fff;
+  background: var(--linka-teal);
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.button:hover { background: #095d64; }
+
+.site-footer .wrap {
+  padding: 28px 0;
+  color: var(--linka-muted);
+  font-size: .95rem;
+}
+
+@media (max-width: 760px) {
+  .site-header .wrap { align-items: flex-start; flex-direction: column; }
+  .main-nav ul { flex-direction: column; gap: 8px; }
+  .hero { padding-top: 44px; }
+}
