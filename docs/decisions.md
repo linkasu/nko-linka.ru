@@ -4,7 +4,7 @@
 
 ## Product
 
-- `nko-linka.ru` становится официальным главным сайтом АНО "Линка" и проекта Linka.
+- `nkolinka.ru` становится официальным главным сайтом АНО "Линка" и проекта Linka.
 - Старый `linka.su` будет выключен позже.
 - Редиректы со старого сайта на первом этапе не делаем.
 - Первая версия переносит контент старого сайта без комментариев.
@@ -28,6 +28,7 @@
 - DB: MySQL/MariaDB в Docker на `37.230.192.57`.
 - Uploads: Yandex Object Storage.
 - TLS: Yandex Certificate Manager.
+- Outbound email: Yandex Cloud Postbox from `no-reply@nkolinka.ru`.
 - Secrets: GitHub Actions + YC runtime secrets.
 - Analytics: later, not in v1.
 

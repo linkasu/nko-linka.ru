@@ -1,6 +1,6 @@
-# nko-linka.ru
+# nkolinka.ru
 
-Официальный сайт АНО "Линка" на WordPress для домена `nko-linka.ru`.
+Официальный сайт АНО "Линка" на WordPress для домена `nkolinka.ru`.
 
 ## Назначение
 

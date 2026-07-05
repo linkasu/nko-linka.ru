@@ -19,10 +19,9 @@
 
 ## 3. Object Storage
 
-1. Создать bucket для WordPress uploads.
-2. Настроить минимальные access keys для WordPress.
-3. Настроить CORS/public read policy по выбранной схеме.
-4. Выбрать и проверить WordPress S3 plugin.
+1. Bucket `nko-linka-ru-uploads` создан.
+2. WordPress uploads подключены как RW Object Storage mount к `/var/www/html/wp-content/uploads`.
+3. WordPress S3 plugin не используется: mount проще и не требует хранения S3 credentials в WordPress.
 
 ## 4. WordPress Runtime Secrets
 
@@ -45,28 +44,50 @@ Required runtime secrets:
 
 ## 5. YC Serverless Container
 
-1. Create runtime service account with minimal permissions.
-2. Configure container revision using image from `cr.yandex/crpu3icktgossftl7l2r/nko-linka-wordpress`.
-3. Configure runtime environment and secrets.
-4. Attach domain and certificate.
-5. Verify `/healthz.php`, `/wp-admin/`, media uploads and public pages.
+1. Runtime service account `nko-linka-runtime` создан.
+2. Serverless Container `nko-linka-wordpress` создан и использует image `cr.yandex/crpu3icktgossftl7l2r/nko-linka-wordpress:main`.
+3. Runtime secrets подключены из Lockbox secret `nko-linka-wordpress-runtime`.
+4. API Gateway `nko-linka-wordpress` создан как публичный proxy к контейнеру.
+5. Domain `nkolinka.ru` is attached to API Gateway with certificate `fpqfb4bbj47ppclem208`.
+6. Verified `/healthz.php`, `/`, `/programs/`, `/reports/`, and `/wp-login.php` on generated container/gateway URLs.
+7. Public `https://nkolinka.ru`, `/programs/`, `/wp-login.php`, and `/healthz.php` verified after DNS/API Gateway propagation.
+8. Runtime hotfix revision `bbais7f2cudasnda2pit` fixes Apache `/wp-admin` redirect from leaking internal port `8080`.
+9. Runtime hotfix revision `bba9gv4igtssask5na1g` enables Apache rewrite fallback and WordPress pretty permalinks.
+10. Postbox SMTP configuration has been added to the WordPress mu-plugin but still requires a CI-built image deploy and runtime env bindings.
 
 ## 6. Content Import
 
-1. Install WordPress.
-2. Activate `Linka NKO` theme.
-3. Create pages from `content/pages/`.
-4. Create menu without donations and without book link.
-5. Upload legal PDF documents.
-6. Import articles without comments.
-7. Check that search/menu/page content contains no donation CTA.
+1. WordPress installed.
+2. `Linka NKO` theme activated.
+3. Base pages from `content/pages/` created in WordPress.
+4. Primary menu created without donations and without book link.
+5. Primary menu assignment restored after `theme_mods_linka-nko` was overwritten by WordPress.
+6. Legal PDF documents still need to be uploaded and linked on the documents page.
+7. Full article migration still needs source text/images from the old site.
+8. Public home HTML checked for donation-like text.
 
-## 7. Final Verification
+## 8. WordPress Users
 
-1. `curl -I https://nko-linka.ru` returns `200` or expected redirects.
-2. `https://nko-linka.ru/wp-login.php` is reachable.
+1. `ivan` / `ivan@aacidov.ru` is an administrator.
+2. `darya.garbuzova` / `daria300103@gmail.com` is an editor.
+3. `ekaterina.karpova` / `karpova260102@gmail.com` is an editor.
+4. Initial passwords are stored in Lockbox secret `nko-linka-wordpress-users`.
+
+## 9. Postbox
+
+1. Domain identity `nkolinka.ru` is verified for sending.
+2. DKIM selector is `pb20260705`.
+3. SPF and DMARC records are present in YC DNS.
+4. SMTP/API secrets are stored in Lockbox secret `nko-linka-postbox`.
+5. Temporary local Postbox key files were removed.
+
+## 10. Final Verification
+
+1. `curl -I https://nkolinka.ru` returns `200` or expected redirects.
+2. `https://nkolinka.ru/wp-login.php` is reachable.
 3. Uploaded media opens from Object Storage.
 4. Mobile layout is usable.
 5. Documents and reports pages are present.
 6. No analytics scripts are present in v1.
 7. No donation pages, links or requisites are present.
+8. `https://nkolinka.ru/wp-admin` redirects to `https://nkolinka.ru/wp-admin/` and then to login without `:8080`.

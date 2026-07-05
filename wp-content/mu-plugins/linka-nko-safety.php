@@ -28,3 +28,31 @@ add_action('wp_before_admin_bar_render', static function (): void {
         $wp_admin_bar->remove_menu('comments');
     }
 });
+
+add_action('phpmailer_init', static function (PHPMailer\PHPMailer\PHPMailer $phpmailer): void {
+    $host = getenv('POSTBOX_SMTP_HOST') ?: '';
+    $username = getenv('POSTBOX_SMTP_USERNAME') ?: '';
+    $password = getenv('POSTBOX_SMTP_PASSWORD') ?: '';
+    $from = getenv('POSTBOX_FROM_EMAIL') ?: '';
+
+    if ($host === '' || $username === '' || $password === '' || $from === '') {
+        return;
+    }
+
+    $phpmailer->isSMTP();
+    $phpmailer->Host = $host;
+    $phpmailer->Port = (int) (getenv('POSTBOX_SMTP_PORT') ?: 587);
+    $phpmailer->SMTPAuth = true;
+    $phpmailer->Username = $username;
+    $phpmailer->Password = $password;
+    $phpmailer->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+    $phpmailer->setFrom($from, getenv('POSTBOX_FROM_NAME') ?: 'АНО Линка', false);
+});
+
+add_filter('wp_mail_from', static function (string $email): string {
+    return getenv('POSTBOX_FROM_EMAIL') ?: $email;
+});
+
+add_filter('wp_mail_from_name', static function (string $name): string {
+    return getenv('POSTBOX_FROM_NAME') ?: $name;
+});

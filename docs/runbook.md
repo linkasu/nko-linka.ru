@@ -17,6 +17,7 @@ yc serverless container list --folder-id b1gn4stour811vgtjude
 yc container registry list --folder-id b1gn4stour811vgtjude
 yc certificate-manager certificate list --folder-id b1gn4stour811vgtjude
 yc storage bucket list --folder-id b1gn4stour811vgtjude
+yc lockbox secret list --folder-id b1gn4stour811vgtjude
 ```
 
 ## 3. Server Read-Only Inventory
@@ -42,8 +43,8 @@ Do not stop, remove or recreate anything without explicit confirmation.
 ## 5. Verification
 
 ```bash
-curl -I https://nko-linka.ru
-curl -I https://nko-linka.ru/wp-login.php
+curl -I https://nkolinka.ru
+curl -I https://nkolinka.ru/wp-login.php
 ```
 
 Also verify:
@@ -54,3 +55,10 @@ Also verify:
 - No donation links in menu or pages.
 - Documents page links to PDFs.
 - Mobile rendering.
+
+## 6. Secrets
+
+- Runtime WordPress secrets: Lockbox `nko-linka-wordpress-runtime`.
+- Postbox SMTP/API secrets: Lockbox `nko-linka-postbox`.
+- Initial WordPress user passwords: Lockbox `nko-linka-wordpress-users`.
+- Do not print Lockbox payloads in logs or commit exported payload files.

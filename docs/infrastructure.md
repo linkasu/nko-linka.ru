@@ -3,18 +3,28 @@
 ## Target
 
 ```text
-User -> nko-linka.ru -> YC Serverless Container -> WordPress
+User -> nkolinka.ru -> YC API Gateway -> YC Serverless Container -> WordPress
                                       |-> MariaDB on 37.230.192.57
                                       |-> Yandex Object Storage for uploads
                                       |-> YC Certificate Manager for TLS
+                                      |-> YC Postbox for outbound email
+```
+
+Current production path before custom domain validation:
+
+```text
+User -> API Gateway d5dmjh8ur6ogqs55jbqn -> Serverless Container bba644mi7027h56etnsd -> WordPress
 ```
 
 ## Yandex Cloud
 
 - Folder ID: `b1gn4stour811vgtjude`.
 - Container runtime: Yandex Cloud Serverless Containers.
+- Serverless Container: `nko-linka-wordpress`, id `bba644mi7027h56etnsd`.
+- API Gateway: `nko-linka-wordpress`, id `d5dmjh8ur6ogqs55jbqn`.
 - Container image source: GitHub CI builds image and pushes it to Yandex Container Registry.
-- TLS: managed certificate in YC Certificate Manager.
+- TLS: managed certificate in YC Certificate Manager, certificate id `fpqfb4bbj47ppclem208`, status `ISSUED`.
+- Outbound email: Yandex Cloud Postbox, domain identity `nkolinka.ru`, DKIM selector `pb20260705`.
 
 ## WordPress Runtime Requirements
 
@@ -35,18 +45,23 @@ WordPress recommends:
 
 Serverless containers do not provide stable local persistent storage. WordPress uploads must use Yandex Object Storage through an S3-compatible WordPress plugin or custom configuration.
 
+## Outbound Email
+
+- Yandex Cloud Postbox identity `nkolinka.ru` is verified for sending.
+- Sender address for WordPress service mail: `no-reply@nkolinka.ru`.
+- SMTP credentials are stored in Lockbox secret `nko-linka-postbox`.
+- WordPress SMTP configuration is implemented in `wp-content/mu-plugins/linka-nko-safety.php` and requires a CI-built image deploy plus runtime env bindings.
+
 ## CI/CD
 
 - Do not build Docker image locally or on the server.
 - GitHub Actions builds and publishes image.
 - Deployment updates YC Serverless Container revision.
 - Secrets live in GitHub Actions and YC runtime secrets/Lockbox.
+- Current production revision includes a runtime startup-command hotfix for Apache canonical redirects until a CI-built image with `infra/wordpress/apache-server-name.conf` is deployed.
 
 ## Open Technical Tasks
 
-- Use Yandex Container Registry image path `cr.yandex/crpu3icktgossftl7l2r/nko-linka-wordpress` for CI-built WordPress images.
-- Confirm existing SSH alias for `37.230.192.57`.
-- Confirm current DNS records for `nko-linka.ru`.
-- Create Object Storage bucket and access key policy.
-- Decide WordPress S3 plugin after compatibility check.
-- Create MariaDB container and backup policy on `37.230.192.57`.
+- Deploy a CI-built image with the Apache canonical redirect fix baked in.
+- Deploy a CI-built image with WordPress Postbox SMTP configuration baked in and bind `POSTBOX_SMTP_*` runtime env vars from Lockbox.
+- Upload registration PDF files to the public uploads bucket/media path and replace placeholders on the documents page.

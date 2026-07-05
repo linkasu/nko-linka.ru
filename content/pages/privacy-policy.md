@@ -12,7 +12,7 @@ Email для обращений: feedback@linka.su.
 
 ## Сайт
 
-Сайт: https://nko-linka.ru.
+Сайт: https://nkolinka.ru.
 
 ## Обработка данных в первой версии
 

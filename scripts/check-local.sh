@@ -16,6 +16,7 @@ fi
 
 if command -v ruby >/dev/null 2>&1; then
   ruby -e "require 'yaml'; YAML.load_file('.github/workflows/container.yml')"
+  ruby -e "require 'yaml'; YAML.load_file('infra/yandex/api-gateway.yaml')"
 else
   printf 'skip: ruby is not installed, YAML syntax check was not run\n' >&2
 fi

@@ -7,9 +7,12 @@ RUN sed -ri 's/^Listen 80$/Listen 8080/' /etc/apache2/ports.conf \
     && sed -ri 's/<VirtualHost \*:80>/<VirtualHost *:8080>/' /etc/apache2/sites-available/000-default.conf
 
 COPY infra/wordpress/php.ini /usr/local/etc/php/conf.d/linka-nko.ini
+COPY infra/wordpress/apache-server-name.conf /etc/apache2/conf-available/linka-nko-server-name.conf
 COPY infra/wordpress/healthz.php /usr/src/wordpress/healthz.php
 COPY wp-content/ /usr/src/wordpress/wp-content/
 
-RUN chown -R www-data:www-data /usr/src/wordpress/wp-content /usr/src/wordpress/healthz.php
+RUN a2enmod rewrite \
+    && a2enconf linka-nko-server-name \
+    && chown -R www-data:www-data /usr/src/wordpress/wp-content /usr/src/wordpress/healthz.php
 
 EXPOSE 8080
