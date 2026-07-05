@@ -58,10 +58,8 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 - GitHub Actions builds and publishes image.
 - Deployment updates YC Serverless Container revision.
 - Secrets live in GitHub Actions and YC runtime secrets/Lockbox.
-- Current production revision includes a runtime startup-command hotfix for Apache canonical redirects until a CI-built image with `infra/wordpress/apache-server-name.conf` is deployed.
+- Current production revision is a CI-built image with Apache canonical redirect fixes and WordPress Postbox SMTP configuration baked in.
 
 ## Open Technical Tasks
 
-- Deploy a CI-built image with the Apache canonical redirect fix baked in.
-- Deploy a CI-built image with WordPress Postbox SMTP configuration baked in and bind `POSTBOX_SMTP_*` runtime env vars from Lockbox.
 - Upload registration PDF files to the public uploads bucket/media path and replace placeholders on the documents page.
