@@ -13,7 +13,7 @@ User -> nko-linka.ru -> YC Serverless Container -> WordPress
 
 - Folder ID: `b1gn4stour811vgtjude`.
 - Container runtime: Yandex Cloud Serverless Containers.
-- Container image source: GitHub CI build artifact in registry.
+- Container image source: GitHub CI builds image and pushes it to Yandex Container Registry.
 - TLS: managed certificate in YC Certificate Manager.
 
 ## WordPress Runtime Requirements
@@ -44,7 +44,7 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 
 ## Open Technical Tasks
 
-- Use GHCR image path `ghcr.io/linkasu/nko-linka.ru` for CI-built WordPress images.
+- Use Yandex Container Registry image path `cr.yandex/crpu3icktgossftl7l2r/nko-linka-wordpress` for CI-built WordPress images.
 - Confirm existing SSH alias for `37.230.192.57`.
 - Confirm current DNS records for `nko-linka.ru`.
 - Create Object Storage bucket and access key policy.

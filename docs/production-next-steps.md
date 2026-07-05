@@ -45,8 +45,8 @@ Required runtime secrets:
 
 ## 5. YC Serverless Container
 
-1. Create service account with minimal permissions.
-2. Configure container revision using image from `ghcr.io/linkasu/nko-linka.ru`.
+1. Create runtime service account with minimal permissions.
+2. Configure container revision using image from `cr.yandex/crpu3icktgossftl7l2r/nko-linka-wordpress`.
 3. Configure runtime environment and secrets.
 4. Attach domain and certificate.
 5. Verify `/healthz.php`, `/wp-admin/`, media uploads and public pages.

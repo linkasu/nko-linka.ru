@@ -16,12 +16,16 @@
 - Folder name: `nko-linka`.
 - Folder status: `ACTIVE`.
 
-Current folder resources:
+Current folder resources after initial setup:
 
 - Serverless Containers: none.
-- Container Registry: none.
+- Container Registry: `nko-linka`, id `crpu3icktgossftl7l2r`.
 - Certificate Manager certificates: none.
 - Object Storage buckets: none.
+
+Service accounts:
+
+- `nko-linka-ci`, id `ajedkt6io7s4dn8v1cog`, role `container-registry.images.pusher` for CI image publishing.
 
 ## Domain
 
@@ -59,4 +63,4 @@ Current Docker volumes list is empty from `docker volume ls` output.
 - YC Serverless Container is not created yet.
 - Object Storage bucket for uploads is not created yet.
 - TLS certificate for `nko-linka.ru` is not created yet.
-- Registry target is not created in YC; current scaffold uses GHCR.
+- Runtime service account is not created yet.
