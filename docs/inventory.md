@@ -19,7 +19,8 @@
 Current folder resources after initial setup:
 
 - Serverless Container: `nko-linka-wordpress`, id `bba644mi7027h56etnsd`, URL `https://bba644mi7027h56etnsd.containers.yandexcloud.net/`.
-- Active clean CI-built revision: `bbaa7rj0s11o5ib7hvrc`, image digest `sha256:a2e6ff4be2bb4c91bbfd1752c1fae2998c500afe3cb698b6b1a668edfc3f8909`.
+- Active clean CI-built revision: `bbadcp2actunih3j2e48`, image digest `sha256:56022de65894f547e9c3ca578e43891692764939ce58ff92c75f92703a4c7e83`, execution timeout `300s`.
+- Previous clean CI-built revision: `bbaa7rj0s11o5ib7hvrc`.
 - Previous runtime hotfix revision: `bba9gv4igtssask5na1g`.
 - Previous Apache redirect hotfix revision: `bbais7f2cudasnda2pit`.
 - Previous revision before Apache redirect hotfix: `bbafgfirvpqipedn6bli`.
@@ -57,7 +58,8 @@ Service accounts:
 - Public verification on 2026-07-05: `https://nkolinka.ru/`, `/programs/`, `/wp-login.php`, and `/healthz.php` returned `200` with valid TLS.
 - `https://nkolinka.ru/wp-admin` redirects to `https://nkolinka.ru/wp-admin/`, then to the WordPress login page without leaking `:8080`.
 - Pretty permalinks are enabled with `/%postname%/`; Apache rewrite fallback is enabled in revision `bba9gv4igtssask5na1g`.
-- Apache rewrite fallback and `/wp-admin` canonical redirect are baked into active revision `bbaa7rj0s11o5ib7hvrc`; no startup-command hotfix is used in the active revision.
+- Apache rewrite fallback and `/wp-admin` canonical redirect are baked into active revision `bbadcp2actunih3j2e48`; no startup-command hotfix is used in the active revision.
+- WordPress admin updater prerequisites are baked into active revision `bbadcp2actunih3j2e48`: `FS_METHOD=direct`, `WP_TEMP_DIR=/tmp`, PHP `max_execution_time=300`, container `execution_timeout=300s`.
 - Main menu is assigned to theme location `primary` and renders public pages without donation links.
 - Chrome DevTools Protocol check on 2026-07-05: clicking the home CTA `Смотреть программы` navigated to `https://nkolinka.ru/programs/`, page title `Программы – АНО Линка`, `h1` `Программы`, no console exceptions, no 4xx/5xx page resources.
 - Public home HTML did not contain donation-like words or generated service URLs.
@@ -76,7 +78,7 @@ Service accounts:
 - TXT `_dmarc.nkolinka.ru.` -> `v=DMARC1;p=none`.
 - SMTP host: `postbox.cloud.yandex.net`, STARTTLS port `587`, SMTPS port `465`.
 - SMTP/API secrets are stored in Lockbox secret `nko-linka-postbox` and removed from the local temp directory.
-- WordPress Postbox SMTP env vars are bound to active Serverless Container revision `bbaa7rj0s11o5ib7hvrc`.
+- WordPress Postbox SMTP env vars are bound to active Serverless Container revision `bbadcp2actunih3j2e48`.
 
 ## WordPress Users
 
@@ -126,6 +128,7 @@ MariaDB backup check:
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260705T164030Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260705T173656Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260705T181042Z.sql.gz
+/home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260706T125626Z.sql.gz
 ```
 
 Current Docker named volumes list is empty from `docker volume ls` output; MariaDB uses bind mounts in `/home/aacidov/nko-linka-db`.
