@@ -59,7 +59,7 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 - Deployment updates YC Serverless Container revision.
 - Secrets live in GitHub Actions and YC runtime secrets/Lockbox.
 - Current production revision is a CI-built image with Apache canonical redirect fixes and WordPress Postbox SMTP configuration baked in.
-- WordPress admin-managed updates use direct filesystem writes and require a longer container/PHP timeout than public page requests.
+- WordPress admin-managed updates use direct filesystem writes, a runtime-created writable temp directory `/tmp/wordpress`, and longer container/PHP timeouts than public page requests.
 
 ## Open Technical Tasks
 

@@ -59,7 +59,7 @@ Service accounts:
 - `https://nkolinka.ru/wp-admin` redirects to `https://nkolinka.ru/wp-admin/`, then to the WordPress login page without leaking `:8080`.
 - Pretty permalinks are enabled with `/%postname%/`; Apache rewrite fallback is enabled in revision `bba9gv4igtssask5na1g`.
 - Apache rewrite fallback and `/wp-admin` canonical redirect are baked into active revision `bbadcp2actunih3j2e48`; no startup-command hotfix is used in the active revision.
-- WordPress admin updater prerequisites are baked into active revision `bbadcp2actunih3j2e48`: `FS_METHOD=direct`, `WP_TEMP_DIR=/tmp`, PHP `max_execution_time=300`, container `execution_timeout=300s`.
+- WordPress admin updater prerequisites are baked into active revision `bbadcp2actunih3j2e48`: `FS_METHOD=direct`, `WP_TEMP_DIR=/tmp/wordpress`, PHP `max_execution_time=300`, container `execution_timeout=300s`.
 - Main menu is assigned to theme location `primary` and renders public pages without donation links.
 - Chrome DevTools Protocol check on 2026-07-05: clicking the home CTA `Смотреть программы` navigated to `https://nkolinka.ru/programs/`, page title `Программы – АНО Линка`, `h1` `Программы`, no console exceptions, no 4xx/5xx page resources.
 - Public home HTML did not contain donation-like words or generated service URLs.

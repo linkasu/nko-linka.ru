@@ -8,5 +8,5 @@ if (!defined('FS_METHOD')) {
 }
 
 if (!defined('WP_TEMP_DIR')) {
-    define('WP_TEMP_DIR', '/tmp');
+    define('WP_TEMP_DIR', getenv('WORDPRESS_TMP_DIR') ?: '/tmp/wordpress');
 }

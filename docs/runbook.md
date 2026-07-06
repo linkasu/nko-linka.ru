@@ -51,7 +51,7 @@ Also verify:
 
 - WordPress home URL and site URL.
 - Admin login.
-- Admin updater prerequisites: `FS_METHOD=direct`, writable temp directory, PHP/container timeouts long enough for update requests.
+- Admin updater prerequisites: `FS_METHOD=direct`, writable temp directory `/tmp/wordpress`, PHP/container timeouts long enough for update requests.
 - Media upload and public media URL.
 - No donation links in menu or pages.
 - Documents page links to PDFs.
