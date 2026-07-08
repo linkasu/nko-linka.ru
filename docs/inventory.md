@@ -19,7 +19,8 @@
 Current folder resources after initial setup:
 
 - Serverless Container: `nko-linka-wordpress`, id `bba644mi7027h56etnsd`, URL `https://bba644mi7027h56etnsd.containers.yandexcloud.net/`.
-- Active clean CI-built revision: `bbav32pnasspfrru4k36`, image digest `sha256:5243c6b153db5fa04ee66f534f49c246b852e56246bf6145bb47812bc3939694`, execution timeout `300s`.
+- Active clean CI-built revision: `bba91c390q8ss4da9vp8`, image digest `sha256:f516eddd34aec9c17978d698aa7efd9ae625a24feb8797f412368aab8982809d`, execution timeout `300s`.
+- Previous donation temp-dir revision: `bbav32pnasspfrru4k36`.
 - Previous admin updater timeout revision: `bbadcp2actunih3j2e48`.
 - Previous clean CI-built revision: `bbaa7rj0s11o5ib7hvrc`.
 - Previous runtime hotfix revision: `bba9gv4igtssask5na1g`.
@@ -59,11 +60,11 @@ Service accounts:
 - Public verification on 2026-07-05: `https://nkolinka.ru/`, `/programs/`, `/wp-login.php`, and `/healthz.php` returned `200` with valid TLS.
 - `https://nkolinka.ru/wp-admin` redirects to `https://nkolinka.ru/wp-admin/`, then to the WordPress login page without leaking `:8080`.
 - Pretty permalinks are enabled with `/%postname%/`; Apache rewrite fallback is enabled in revision `bba9gv4igtssask5na1g`.
-- Apache rewrite fallback and `/wp-admin` canonical redirect are baked into active revision `bbav32pnasspfrru4k36`; no startup-command hotfix is used in the active revision.
-- WordPress admin updater prerequisites are baked into active revision `bbav32pnasspfrru4k36`: runtime-created writable `/tmp/wordpress`, `FS_METHOD=direct`, `WP_TEMP_DIR=/tmp/wordpress`, PHP `sys_temp_dir=/tmp/wordpress`, PHP `upload_tmp_dir=/tmp/wordpress`, PHP `max_execution_time=300`, container `execution_timeout=300s`.
-- Main menu is assigned to theme location `primary` and renders public pages without donation links.
+- Apache rewrite fallback and `/wp-admin` canonical redirect are baked into active revision `bba91c390q8ss4da9vp8`; no startup-command hotfix is used in the active revision.
+- WordPress admin updater prerequisites are baked into active revision `bba91c390q8ss4da9vp8`: runtime-created writable `/tmp/wordpress`, `FS_METHOD=direct`, `WP_TEMP_DIR=/tmp/wordpress`, PHP `sys_temp_dir=/tmp/wordpress`, PHP `upload_tmp_dir=/tmp/wordpress`, PHP `max_execution_time=300`, container `execution_timeout=300s`.
+- Main menu is assigned to theme location `primary` and includes the public voluntary donation page link.
 - Chrome DevTools Protocol check on 2026-07-05: clicking the home CTA `Смотреть программы` navigated to `https://nkolinka.ru/programs/`, page title `Программы – АНО Линка`, `h1` `Программы`, no console exceptions, no 4xx/5xx page resources.
-- Public home HTML did not contain donation-like words or generated service URLs.
+- Public home HTML contains a `Пожертвовать` CTA to `/donate/`.
 - Mistaken certificate `fpq2ktcburgsm11e4vlt` for `nko-linka.ru` is not used.
 
 ## Postbox
@@ -79,7 +80,19 @@ Service accounts:
 - TXT `_dmarc.nkolinka.ru.` -> `v=DMARC1;p=none`.
 - SMTP host: `postbox.cloud.yandex.net`, STARTTLS port `587`, SMTPS port `465`.
 - SMTP/API secrets are stored in Lockbox secret `nko-linka-postbox` and removed from the local temp directory.
-- WordPress Postbox SMTP env vars are bound to active Serverless Container revision `bbav32pnasspfrru4k36`.
+- WordPress Postbox SMTP env vars are bound to active Serverless Container revision `bba91c390q8ss4da9vp8`.
+
+## Donations
+
+- Page `https://nkolinka.ru/donate/` is published.
+- Page `https://nkolinka.ru/donation-offer/` is published.
+- Page `https://nkolinka.ru/privacy-policy/` is updated for voluntary donation payment processing and YooKassa data transfer.
+- Page `https://nkolinka.ru/requisites/` states that payment requisites are not published on the site.
+- Home page has a `Пожертвовать` CTA.
+- Main menu has a `Пожертвовать` item.
+- Donation page contains an inactive placeholder button: `Прием пожертвований скоро откроется`.
+- Donation page has no active YooKassa/payment widget, payment link, `shopId`, `confirmation_token` or checkout widget.
+- Donation page states that a donation is not payment for goods, services, courses, consultations, software or digital services.
 
 ## WordPress Users
 
@@ -131,6 +144,7 @@ MariaDB backup check:
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260705T181042Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260706T125626Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260706T131415Z.sql.gz
+/home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260708T133010Z.sql.gz
 ```
 
 Current Docker named volumes list is empty from `docker volume ls` output; MariaDB uses bind mounts in `/home/aacidov/nko-linka-db`.

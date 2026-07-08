@@ -53,7 +53,6 @@ Also verify:
 - Admin login.
 - Admin updater prerequisites: `FS_METHOD=direct`, writable temp directory `/tmp/wordpress`, PHP/container timeouts long enough for update requests.
 - Media upload and public media URL.
-- No donation links in menu or pages.
 - If donation pages are enabled: no goods, services, prices, tariffs or active payment form before YooKassa approval.
 - Documents page links to PDFs.
 - Mobile rendering.

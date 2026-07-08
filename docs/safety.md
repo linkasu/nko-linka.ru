@@ -21,7 +21,7 @@ Ask the user before:
 - Running broad `wp search-replace`.
 - Deleting remote files.
 - Changing DNS records.
-- Enabling donations or analytics.
+- Enabling active payment forms, payment links, payment requisites or analytics.
 
 ## Backups
 
@@ -40,4 +40,6 @@ Before production content migration or update:
 
 ## Donations
 
-Any donation flow is out of scope until a separate legal and accounting decision is made.
+Voluntary donations for statutory nonprofit activity are allowed. Active payment forms, payment links and payment requisites require separate confirmation after YooKassa approval.
+
+Do not add goods, services, courses, consultations, software, prices, tariffs, carts or commercial payment flows without a separate decision.
