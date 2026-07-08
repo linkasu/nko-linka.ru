@@ -121,6 +121,28 @@ a:focus { outline: 3px solid var(--linka-green); outline-offset: 3px; }
 
 .button:hover { background: #095d64; }
 
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.button-secondary {
+  color: var(--linka-teal);
+  background: #fff;
+  border: 1px solid var(--linka-teal);
+}
+
+.button-secondary:hover { color: #fff; }
+
+.button:disabled,
+.button[disabled] {
+  cursor: not-allowed;
+  color: var(--linka-muted);
+  background: #eef4f3;
+  border: 1px solid var(--linka-border);
+}
+
 .site-footer .wrap {
   padding: 28px 0;
   color: var(--linka-muted);

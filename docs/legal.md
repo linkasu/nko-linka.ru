@@ -29,6 +29,14 @@ The full legal address is present in public EGRUL documents. For v1:
 - Requisites.
 - Contacts.
 - Personal data policy.
+- Donation offer, if the site shows voluntary donations.
+
+## Donations
+
+- Only voluntary donations for statutory nonprofit activity are allowed on the site.
+- Donation text must not look like payment for goods, services, courses, consultations, software or digital products.
+- Before enabling real payments, publish a donation offer and update the personal data policy.
+- Active payment form or payment link is enabled only after separate confirmation after YooKassa approval.
 
 ## Nonprofit Transparency
 
