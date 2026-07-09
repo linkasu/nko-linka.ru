@@ -61,5 +61,6 @@ Also verify:
 
 - Runtime WordPress secrets: Lockbox `nko-linka-wordpress-runtime`.
 - Postbox SMTP/API secrets: Lockbox `nko-linka-postbox`.
+- YooKassa payment secrets: keep in a separate Lockbox secret and bind only required `YOOKASSA_*` runtime variables.
 - Initial WordPress user passwords: Lockbox `nko-linka-wordpress-users`.
 - Do not print Lockbox payloads in logs or commit exported payload files.

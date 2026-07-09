@@ -8,6 +8,7 @@ User -> nkolinka.ru -> YC API Gateway -> YC Serverless Container -> WordPress
                                       |-> Yandex Object Storage for uploads
                                       |-> YC Certificate Manager for TLS
                                       |-> YC Postbox for outbound email
+                                      |-> YooKassa redirect checkout for voluntary donations
 ```
 
 Current production path before custom domain validation:
@@ -25,6 +26,7 @@ User -> API Gateway d5dmjh8ur6ogqs55jbqn -> Serverless Container bba644mi7027h56
 - Container image source: GitHub CI builds image and pushes it to Yandex Container Registry.
 - TLS: managed certificate in YC Certificate Manager, certificate id `fpqfb4bbj47ppclem208`, status `ISSUED`.
 - Outbound email: Yandex Cloud Postbox, domain identity `nkolinka.ru`, DKIM selector `pb20260705`.
+- Donations: YooKassa redirect checkout, enabled only when runtime `YOOKASSA_*` secrets are bound.
 
 ## WordPress Runtime Requirements
 
@@ -51,6 +53,15 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 - Sender address for WordPress service mail: `no-reply@nkolinka.ru`.
 - SMTP credentials are stored in Lockbox secret `nko-linka-postbox`.
 - WordPress SMTP configuration is implemented in `wp-content/mu-plugins/linka-nko-safety.php` and requires a CI-built image deploy plus runtime env bindings.
+
+## Donations
+
+- Voluntary donation form is implemented in `wp-content/mu-plugins/linka-nko-donations.php`.
+- The form collects donation amount, donor full name, donor email, and consent with the donation offer and personal data policy.
+- Payment is created server-side through YooKassa API and redirects the donor to YooKassa confirmation URL.
+- Required runtime secrets: `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`.
+- Optional runtime configuration: `YOOKASSA_RETURN_URL`, `YOOKASSA_SEND_RECEIPT`, `YOOKASSA_VAT_CODE`, `YOOKASSA_PAYMENT_SUBJECT`, `YOOKASSA_TAX_SYSTEM_CODE`.
+- YooKassa secrets must be stored in Lockbox and bound to the Serverless Container environment; never commit them.
 
 ## CI/CD
 

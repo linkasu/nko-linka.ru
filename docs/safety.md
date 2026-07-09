@@ -7,6 +7,7 @@ Never commit or print secrets:
 - WordPress admin password.
 - DB host credentials.
 - Object Storage access keys.
+- YooKassa shop id and secret key.
 - YC service account key.
 - TLS private keys.
 - `wp-config.php` secrets.
@@ -43,3 +44,5 @@ Before production content migration or update:
 Voluntary donations for statutory nonprofit activity are allowed. Active payment forms, payment links and payment requisites require separate confirmation after YooKassa approval.
 
 Do not add goods, services, courses, consultations, software, prices, tariffs, carts or commercial payment flows without a separate decision.
+
+Store YooKassa credentials only in Lockbox/runtime secrets. Do not print the secret key in logs, terminal output or documentation.
