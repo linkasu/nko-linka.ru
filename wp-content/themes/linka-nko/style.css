@@ -217,6 +217,10 @@ a:focus { outline: 3px solid var(--linka-green); outline-offset: 3px; }
 
 .donation-form__custom-amount {
   grid-column: 1 / -1;
+  display: none !important;
+}
+
+.donation-form__amounts:has(input[value="custom"]:checked) .donation-form__custom-amount {
   display: block !important;
 }
 

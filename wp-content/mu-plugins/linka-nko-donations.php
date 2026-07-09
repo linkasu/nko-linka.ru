@@ -118,7 +118,16 @@ function linka_nko_create_donation(): void
     $status_code = (int) wp_remote_retrieve_response_code($response);
     $body = json_decode((string) wp_remote_retrieve_body($response), true);
     if ($status_code < 200 || $status_code >= 300 || !is_array($body)) {
-        error_log('YooKassa donation bad response: HTTP ' . $status_code);
+        $error_details = [];
+        if (is_array($body)) {
+            foreach (['type', 'id', 'code', 'description', 'parameter'] as $field) {
+                if (isset($body[$field]) && is_scalar($body[$field])) {
+                    $error_details[$field] = substr(wp_strip_all_tags((string) $body[$field]), 0, 300);
+                }
+            }
+        }
+
+        error_log('YooKassa donation bad response: HTTP ' . $status_code . ' ' . wp_json_encode($error_details, JSON_UNESCAPED_UNICODE));
         wp_die('Платежный провайдер вернул ошибку. Попробуйте позже.', '', ['response' => 502]);
     }
 
