@@ -53,7 +53,7 @@ Required runtime secrets:
 7. Public `https://nkolinka.ru`, `/programs/`, `/wp-login.php`, and `/healthz.php` verified after DNS/API Gateway propagation.
 8. Runtime hotfix revision `bbais7f2cudasnda2pit` fixes Apache `/wp-admin` redirect from leaking internal port `8080`.
 9. Runtime hotfix revision `bba9gv4igtssask5na1g` enables Apache rewrite fallback and WordPress pretty permalinks.
-10. CI-built revision `bba3urejva5ml83m3o6o` is active and includes Apache fixes, Postbox SMTP configuration, writable admin updater temp directory, the YooKassa donation form with receipt sending, and CSS cache version `0.1.1`.
+10. Revision `bba024ip5isf0e4bcvqr` is active and includes Apache fixes, Postbox SMTP configuration, writable admin updater temp directory, CSS cache version `0.1.1`, and YooKassa receipt sending disabled.
 
 ## 6. Content Import
 
@@ -64,7 +64,7 @@ Required runtime secrets:
 5. Primary menu assignment restored after `theme_mods_linka-nko` was overwritten by WordPress.
 6. Legal PDF documents still need to be uploaded and linked on the documents page.
 7. Full article migration still needs source text/images from the old site.
-8. Public donation pages are published with the active YooKassa donation form.
+8. Public donation pages are published; the active YooKassa donation form is temporarily removed from `/donate/` until YooKassa is configured for voluntary donations without fiscal receipts for goods, works or services.
 
 ## 7. Donations
 
@@ -72,9 +72,9 @@ Required runtime secrets:
 2. Page `https://nkolinka.ru/donation-offer/` is published.
 3. Privacy policy is updated for donation payment processing and YooKassa data transfer.
 4. Home page contains a `Пожертвовать` CTA.
-5. The donation page has active YooKassa redirect integration through runtime secrets.
+5. The donation page temporarily has no active YooKassa form.
 6. The donation page states that donations are not payment for goods, services, courses, consultations or software.
-7. YooKassa requires `receipt`; active Lockbox version `e6qbeor2647eeujp4s0k` sets `YOOKASSA_SEND_RECEIPT=true`.
+7. Active Lockbox version `e6q9ie2tthsjopg8t0bd` sets `YOOKASSA_SEND_RECEIPT=false`.
 
 ## 8. WordPress Users
 

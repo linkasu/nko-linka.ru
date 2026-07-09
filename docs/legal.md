@@ -37,6 +37,7 @@ The full legal address is present in public EGRUL documents. For v1:
 - Donation text must not look like payment for goods, services, courses, consultations, software or digital products.
 - Before enabling real payments, publish a donation offer and update the personal data policy.
 - Active payment form is enabled after YooKassa approval through runtime secrets; donations must remain voluntary and not be presented as payment for goods or services.
+- Do not issue receipts that describe voluntary donations as goods, works, services, courses, consultations, software or digital products.
 
 ## Nonprofit Transparency
 
