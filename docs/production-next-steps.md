@@ -53,7 +53,7 @@ Required runtime secrets:
 7. Public `https://nkolinka.ru`, `/programs/`, `/wp-login.php`, and `/healthz.php` verified after DNS/API Gateway propagation.
 8. Runtime hotfix revision `bbais7f2cudasnda2pit` fixes Apache `/wp-admin` redirect from leaking internal port `8080`.
 9. Runtime hotfix revision `bba9gv4igtssask5na1g` enables Apache rewrite fallback and WordPress pretty permalinks.
-10. CI-built revision `bba91c390q8ss4da9vp8` is active and includes Apache fixes, Postbox SMTP configuration, writable admin updater temp directory, and the home donation CTA without a runtime startup-command hotfix.
+10. CI-built revision `bbaabt3tls344inv85p1` is active and includes Apache fixes, Postbox SMTP configuration, writable admin updater temp directory, and the YooKassa donation form with receipt sending.
 
 ## 6. Content Import
 
@@ -64,7 +64,7 @@ Required runtime secrets:
 5. Primary menu assignment restored after `theme_mods_linka-nko` was overwritten by WordPress.
 6. Legal PDF documents still need to be uploaded and linked on the documents page.
 7. Full article migration still needs source text/images from the old site.
-8. Public donation pages are published for YooKassa review with an inactive placeholder button.
+8. Public donation pages are published with the active YooKassa donation form.
 
 ## 7. Donations
 
@@ -72,8 +72,9 @@ Required runtime secrets:
 2. Page `https://nkolinka.ru/donation-offer/` is published.
 3. Privacy policy is updated for donation payment processing and YooKassa data transfer.
 4. Home page contains a `Пожертвовать` CTA.
-5. The donation page has no active YooKassa/payment integration before approval.
+5. The donation page has active YooKassa redirect integration through runtime secrets.
 6. The donation page states that donations are not payment for goods, services, courses, consultations or software.
+7. YooKassa requires `receipt`; active Lockbox version `e6qbeor2647eeujp4s0k` sets `YOOKASSA_SEND_RECEIPT=true`.
 
 ## 8. WordPress Users
 
@@ -99,5 +100,5 @@ Required runtime secrets:
 4. Mobile layout is usable.
 5. Documents and reports pages are present.
 6. No analytics scripts are present in v1.
-7. Donation pages contain only voluntary donation content, no goods/services payment, no prices for services, no active payment form before YooKassa approval.
+7. Donation pages contain only voluntary donation content, no goods/services payment, and no prices for services.
 8. `https://nkolinka.ru/wp-admin` redirects to `https://nkolinka.ru/wp-admin/` and then to login without `:8080`.

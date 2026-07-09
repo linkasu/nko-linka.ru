@@ -27,7 +27,7 @@ User -> nkolinka.ru -> API Gateway d5dmjh8ur6ogqs55jbqn -> Serverless Container 
 - TLS: managed certificate in YC Certificate Manager, certificate id `fpqfb4bbj47ppclem208`, status `ISSUED`.
 - Outbound email: Yandex Cloud Postbox, domain identity `nkolinka.ru`, DKIM selector `pb20260705`.
 - Donations: YooKassa redirect checkout, enabled only when runtime `YOOKASSA_*` secrets are bound.
-- Active production revision: `bba3vfke42e5f4fqsks2`, image digest `sha256:d752c05b6e3a63cada6799261589158bd9bca30842523117b2ea652eacb42789`.
+- Active production revision: `bbaabt3tls344inv85p1`, image digest `sha256:c1b0229110c5e7d90143e4f13971df87bb68bfbac91ee8bfb808f4e7a7254b1c`.
 
 ## WordPress Runtime Requirements
 
@@ -63,7 +63,8 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 - Required runtime secrets: `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`.
 - Optional runtime configuration: `YOOKASSA_RETURN_URL`, `YOOKASSA_SEND_RECEIPT`, `YOOKASSA_VAT_CODE`, `YOOKASSA_PAYMENT_SUBJECT`, `YOOKASSA_TAX_SYSTEM_CODE`.
 - YooKassa secrets must be stored in Lockbox and bound to the Serverless Container environment; never commit them.
-- Production YooKassa secret: Lockbox `nko-linka-yookassa`, id `e6q8l62gpq6o2hgserti`, version `e6qvpb4jhkj6fk9m4120`.
+- Production YooKassa secret: Lockbox `nko-linka-yookassa`, id `e6q8l62gpq6o2hgserti`, version `e6qbeor2647eeujp4s0k`.
+- Production YooKassa shop requires receipts; `YOOKASSA_SEND_RECEIPT=true` is bound in the active revision.
 
 ## CI/CD
 
