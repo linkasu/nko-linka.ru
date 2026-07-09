@@ -11,10 +11,10 @@ User -> nkolinka.ru -> YC API Gateway -> YC Serverless Container -> WordPress
                                       |-> YooKassa redirect checkout for voluntary donations
 ```
 
-Current production path before custom domain validation:
+Current production path:
 
 ```text
-User -> API Gateway d5dmjh8ur6ogqs55jbqn -> Serverless Container bba644mi7027h56etnsd -> WordPress
+User -> nkolinka.ru -> API Gateway d5dmjh8ur6ogqs55jbqn -> Serverless Container bba644mi7027h56etnsd -> WordPress
 ```
 
 ## Yandex Cloud
@@ -27,6 +27,7 @@ User -> API Gateway d5dmjh8ur6ogqs55jbqn -> Serverless Container bba644mi7027h56
 - TLS: managed certificate in YC Certificate Manager, certificate id `fpqfb4bbj47ppclem208`, status `ISSUED`.
 - Outbound email: Yandex Cloud Postbox, domain identity `nkolinka.ru`, DKIM selector `pb20260705`.
 - Donations: YooKassa redirect checkout, enabled only when runtime `YOOKASSA_*` secrets are bound.
+- Active production revision: `bba3vfke42e5f4fqsks2`, image digest `sha256:d752c05b6e3a63cada6799261589158bd9bca30842523117b2ea652eacb42789`.
 
 ## WordPress Runtime Requirements
 
@@ -62,6 +63,7 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 - Required runtime secrets: `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`.
 - Optional runtime configuration: `YOOKASSA_RETURN_URL`, `YOOKASSA_SEND_RECEIPT`, `YOOKASSA_VAT_CODE`, `YOOKASSA_PAYMENT_SUBJECT`, `YOOKASSA_TAX_SYSTEM_CODE`.
 - YooKassa secrets must be stored in Lockbox and bound to the Serverless Container environment; never commit them.
+- Production YooKassa secret: Lockbox `nko-linka-yookassa`, id `e6q8l62gpq6o2hgserti`, version `e6qvpb4jhkj6fk9m4120`.
 
 ## CI/CD
 
@@ -69,7 +71,7 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 - GitHub Actions builds and publishes image.
 - Deployment updates YC Serverless Container revision.
 - Secrets live in GitHub Actions and YC runtime secrets/Lockbox.
-- Current production revision is a CI-built image with Apache canonical redirect fixes and WordPress Postbox SMTP configuration baked in.
+- Current production revision is a CI-built image with Apache canonical redirect fixes, WordPress Postbox SMTP configuration, and the YooKassa donation form baked in.
 - WordPress admin-managed updates use direct filesystem writes, a runtime-created writable temp directory `/tmp/wordpress`, and longer container/PHP timeouts than public page requests.
 
 ## Open Technical Tasks

@@ -1,6 +1,6 @@
 # Inventory
 
-Дата инвентаря: 2026-07-05.
+Дата инвентаря: 2026-07-09.
 
 ## Local
 
@@ -19,7 +19,8 @@
 Current folder resources after initial setup:
 
 - Serverless Container: `nko-linka-wordpress`, id `bba644mi7027h56etnsd`, URL `https://bba644mi7027h56etnsd.containers.yandexcloud.net/`.
-- Active clean CI-built revision: `bba91c390q8ss4da9vp8`, image digest `sha256:f516eddd34aec9c17978d698aa7efd9ae625a24feb8797f412368aab8982809d`, execution timeout `300s`.
+- Active CI-built revision with YooKassa donation form: `bba3vfke42e5f4fqsks2`, image digest `sha256:d752c05b6e3a63cada6799261589158bd9bca30842523117b2ea652eacb42789`, execution timeout `300s`.
+- Previous clean CI-built revision: `bba91c390q8ss4da9vp8`.
 - Previous donation temp-dir revision: `bbav32pnasspfrru4k36`.
 - Previous admin updater timeout revision: `bbadcp2actunih3j2e48`.
 - Previous clean CI-built revision: `bbaa7rj0s11o5ib7hvrc`.
@@ -34,14 +35,15 @@ Current folder resources after initial setup:
 - Object Storage bucket: `nko-linka-ru-uploads`.
 - Lockbox secret: `nko-linka-wordpress-runtime`, id `e6q3r0sba4cimi3e671g`.
 - Lockbox secret: `nko-linka-postbox`, id `e6qavstvb3jaj59ptjus`, current version `e6q4q143o82o60f012dj`.
-- Lockbox secret: `nko-linka-wordpress-users`, id `e6q718pinteavidarcs3`, current version `e6qmkkqsip25adtl4jr4`.
+- Lockbox secret: `nko-linka-wordpress-users`, id `e6q718pinteavidarcs3`, current version `e6qnkv6gpslq1qp6q16o`.
+- Lockbox secret: `nko-linka-yookassa`, id `e6q8l62gpq6o2hgserti`, current version `e6qvpb4jhkj6fk9m4120`.
 
 Service accounts:
 
 - `nko-linka-ci`, id `ajedkt6io7s4dn8v1cog`, role `container-registry.images.pusher` for CI image publishing.
 - `nko-linka-runtime`, id `aje9j1qvtr8csrsr28d7`, used by Serverless Container and API Gateway runtime.
 - `nko-linka-postbox`, id `ajemsihnm3h2utdl9lvb`, roles `postbox.admin`, `postbox.editor`, and `postbox.sender` for Postbox setup and SMTP sending.
-- `nko-linka-runtime`, id `aje9j1qvtr8csrsr28d7`, has `lockbox.payloadViewer` on Lockbox secret `nko-linka-postbox`.
+- `nko-linka-runtime`, id `aje9j1qvtr8csrsr28d7`, has `lockbox.payloadViewer` on Lockbox secrets `nko-linka-postbox` and `nko-linka-yookassa`.
 
 ## Domain
 
@@ -60,8 +62,8 @@ Service accounts:
 - Public verification on 2026-07-05: `https://nkolinka.ru/`, `/programs/`, `/wp-login.php`, and `/healthz.php` returned `200` with valid TLS.
 - `https://nkolinka.ru/wp-admin` redirects to `https://nkolinka.ru/wp-admin/`, then to the WordPress login page without leaking `:8080`.
 - Pretty permalinks are enabled with `/%postname%/`; Apache rewrite fallback is enabled in revision `bba9gv4igtssask5na1g`.
-- Apache rewrite fallback and `/wp-admin` canonical redirect are baked into active revision `bba91c390q8ss4da9vp8`; no startup-command hotfix is used in the active revision.
-- WordPress admin updater prerequisites are baked into active revision `bba91c390q8ss4da9vp8`: runtime-created writable `/tmp/wordpress`, `FS_METHOD=direct`, `WP_TEMP_DIR=/tmp/wordpress`, PHP `sys_temp_dir=/tmp/wordpress`, PHP `upload_tmp_dir=/tmp/wordpress`, PHP `max_execution_time=300`, container `execution_timeout=300s`.
+- Apache rewrite fallback and `/wp-admin` canonical redirect are baked into active revision `bba3vfke42e5f4fqsks2`; no startup-command hotfix is used in the active revision.
+- WordPress admin updater prerequisites are baked into active revision `bba3vfke42e5f4fqsks2`: runtime-created writable `/tmp/wordpress`, `FS_METHOD=direct`, `WP_TEMP_DIR=/tmp/wordpress`, PHP `sys_temp_dir=/tmp/wordpress`, PHP `upload_tmp_dir=/tmp/wordpress`, PHP `max_execution_time=300`, container `execution_timeout=300s`.
 - Main menu is assigned to theme location `primary` and includes the public voluntary donation page link.
 - Chrome DevTools Protocol check on 2026-07-05: clicking the home CTA `Смотреть программы` navigated to `https://nkolinka.ru/programs/`, page title `Программы – АНО Линка`, `h1` `Программы`, no console exceptions, no 4xx/5xx page resources.
 - Public home HTML contains a `Пожертвовать` CTA to `/donate/`.
@@ -80,7 +82,7 @@ Service accounts:
 - TXT `_dmarc.nkolinka.ru.` -> `v=DMARC1;p=none`.
 - SMTP host: `postbox.cloud.yandex.net`, STARTTLS port `587`, SMTPS port `465`.
 - SMTP/API secrets are stored in Lockbox secret `nko-linka-postbox` and removed from the local temp directory.
-- WordPress Postbox SMTP env vars are bound to active Serverless Container revision `bba91c390q8ss4da9vp8`.
+- WordPress Postbox SMTP env vars are bound to active Serverless Container revision `bba3vfke42e5f4fqsks2`.
 
 ## Donations
 
@@ -90,9 +92,11 @@ Service accounts:
 - Page `https://nkolinka.ru/requisites/` states that payment requisites are not published on the site.
 - Home page has a `Пожертвовать` CTA.
 - Main menu has a `Пожертвовать` item.
-- Donation page contains an inactive placeholder button: `Прием пожертвований скоро откроется`.
-- Donation page has no active YooKassa/payment widget, payment link, `shopId`, `confirmation_token` or checkout widget.
+- Donation page contains the active `[linka_donation_form]` form rendered by `wp-content/mu-plugins/linka-nko-donations.php`.
+- The form creates YooKassa payments server-side and redirects the donor to the YooKassa confirmation URL; YooKassa credentials are stored only in Lockbox and bound as runtime env vars.
+- Runtime YooKassa env vars are bound to active Serverless Container revision `bba3vfke42e5f4fqsks2` from Lockbox secret `nko-linka-yookassa`.
 - Donation page states that a donation is not payment for goods, services, courses, consultations, software or digital services.
+- Public verification on 2026-07-09: `/`, `/donate/`, `/donation-offer/`, `/privacy-policy/`, and `/healthz.php` returned `200`; `/donate/` rendered amount, full name, email and consent fields.
 
 ## WordPress Users
 
@@ -145,6 +149,8 @@ MariaDB backup check:
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260706T125626Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260706T131415Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260708T133010Z.sql.gz
+/home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260709T092051Z.sql.gz
+/home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260709T092950Z.sql.gz
 ```
 
 Current Docker named volumes list is empty from `docker volume ls` output; MariaDB uses bind mounts in `/home/aacidov/nko-linka-db`.

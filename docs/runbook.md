@@ -53,7 +53,7 @@ Also verify:
 - Admin login.
 - Admin updater prerequisites: `FS_METHOD=direct`, writable temp directory `/tmp/wordpress`, PHP/container timeouts long enough for update requests.
 - Media upload and public media URL.
-- If donation pages are enabled: no goods, services, prices, tariffs or active payment form before YooKassa approval.
+- If donation pages are enabled: no goods, services, prices, tariffs or payment secrets in repository; active YooKassa form is allowed only after approval and only through Lockbox/runtime env bindings.
 - Documents page links to PDFs.
 - Mobile rendering.
 
@@ -61,6 +61,6 @@ Also verify:
 
 - Runtime WordPress secrets: Lockbox `nko-linka-wordpress-runtime`.
 - Postbox SMTP/API secrets: Lockbox `nko-linka-postbox`.
-- YooKassa payment secrets: keep in a separate Lockbox secret and bind only required `YOOKASSA_*` runtime variables.
+- YooKassa payment secrets: Lockbox `nko-linka-yookassa`; bind only required `YOOKASSA_*` runtime variables.
 - Initial WordPress user passwords: Lockbox `nko-linka-wordpress-users`.
 - Do not print Lockbox payloads in logs or commit exported payload files.
