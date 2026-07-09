@@ -53,7 +53,7 @@ Required runtime secrets:
 7. Public `https://nkolinka.ru`, `/programs/`, `/wp-login.php`, and `/healthz.php` verified after DNS/API Gateway propagation.
 8. Runtime hotfix revision `bbais7f2cudasnda2pit` fixes Apache `/wp-admin` redirect from leaking internal port `8080`.
 9. Runtime hotfix revision `bba9gv4igtssask5na1g` enables Apache rewrite fallback and WordPress pretty permalinks.
-10. CI-built revision `bbaabt3tls344inv85p1` is active and includes Apache fixes, Postbox SMTP configuration, writable admin updater temp directory, and the YooKassa donation form with receipt sending.
+10. CI-built revision `bba3urejva5ml83m3o6o` is active and includes Apache fixes, Postbox SMTP configuration, writable admin updater temp directory, the YooKassa donation form with receipt sending, and CSS cache version `0.1.1`.
 
 ## 6. Content Import
 

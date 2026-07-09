@@ -27,7 +27,7 @@ User -> nkolinka.ru -> API Gateway d5dmjh8ur6ogqs55jbqn -> Serverless Container 
 - TLS: managed certificate in YC Certificate Manager, certificate id `fpqfb4bbj47ppclem208`, status `ISSUED`.
 - Outbound email: Yandex Cloud Postbox, domain identity `nkolinka.ru`, DKIM selector `pb20260705`.
 - Donations: YooKassa redirect checkout, enabled only when runtime `YOOKASSA_*` secrets are bound.
-- Active production revision: `bbaabt3tls344inv85p1`, image digest `sha256:c1b0229110c5e7d90143e4f13971df87bb68bfbac91ee8bfb808f4e7a7254b1c`.
+- Active production revision: `bba3urejva5ml83m3o6o`, image digest `sha256:8a886445258d79a424be4043af8ca61ee4cefd96a36014fa5dbef197c14b02fd`.
 
 ## WordPress Runtime Requirements
 
