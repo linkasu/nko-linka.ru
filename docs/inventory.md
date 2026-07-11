@@ -19,7 +19,7 @@
 Current folder resources after initial setup:
 
 - Serverless Container: `nko-linka-wordpress`, id `bba644mi7027h56etnsd`, URL `https://bba644mi7027h56etnsd.containers.yandexcloud.net/`.
-- Active revision with donation form disabled and YooKassa receipt sending off: `bba024ip5isf0e4bcvqr`, image digest `sha256:ca8fe299de133eabd65d37f910060b5208afb4fdf0026f126cedb8cbc3035e79`, execution timeout `300s`.
+- Active revision with YooKassa receipt sending off: `bba024ip5isf0e4bcvqr`, image digest `sha256:ca8fe299de133eabd65d37f910060b5208afb4fdf0026f126cedb8cbc3035e79`, execution timeout `300s`.
 - Previous CI-built revision with receipt sending and CSS cache bump: `bba3urejva5ml83m3o6o`.
 - Previous receipt-enabled revision: `bbaabt3tls344inv85p1`.
 - Previous diagnostics revision: `bbara6sf4jt3ldbu2v5e`.
@@ -96,13 +96,14 @@ Service accounts:
 - Page `https://nkolinka.ru/requisites/` states that payment requisites are not published on the site.
 - Home page has a `Пожертвовать` CTA.
 - Main menu has a `Пожертвовать` item.
-- Donation page temporarily does not contain the active `[linka_donation_form]` shortcode.
-- The page explains that online donation acceptance is being configured to avoid incorrect fiscal receipts for voluntary donations.
+- Donation page contains the active `[linka_donation_form]` shortcode.
+- The form creates YooKassa payments server-side without a `receipt` object and redirects the donor to the YooKassa confirmation URL.
 - Runtime YooKassa env vars are bound to active Serverless Container revision `bba024ip5isf0e4bcvqr` from Lockbox secret `nko-linka-yookassa`.
 - Lockbox version `e6q9ie2tthsjopg8t0bd` sets `YOOKASSA_SEND_RECEIPT=false`.
+- YooKassa email on 2026-07-12 confirmed that automatic receipts were disabled for contract `НЭК.451387.01`; the support reply confirmed that no special payment scenario or description is required for voluntary donations.
 - Donation page states that a donation is not payment for goods, services, courses, consultations, software or digital services.
-- Public verification on 2026-07-09: `/`, `/donate/`, `/donation-offer/`, `/privacy-policy/`, and `/healthz.php` returned `200`; `/donate/` rendered amount, full name, email and consent fields.
-- Public verification on 2026-07-09 after disabling: `/donate/` returned `200`, did not include the donation form or submit button, and displayed the temporary setup notice.
+- Public verification on 2026-07-12: `/`, `/donate/`, and `/healthz.php` returned `200`; `/donate/` rendered the donation form and submit button.
+- Test POST verification on 2026-07-12: WordPress donation handler returned `303` to `https://yoomoney.ru/checkout/payments/v2/contract` without sending `receipt`; no payment was completed.
 
 ## WordPress Users
 
@@ -161,6 +162,7 @@ MariaDB backup check:
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260709T100621Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260709T102653Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260709T104810Z.sql.gz
+/home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260711T220949Z.sql.gz
 ```
 
 Current Docker named volumes list is empty from `docker volume ls` output; MariaDB uses bind mounts in `/home/aacidov/nko-linka-db`.

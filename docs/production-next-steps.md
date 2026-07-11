@@ -64,7 +64,7 @@ Required runtime secrets:
 5. Primary menu assignment restored after `theme_mods_linka-nko` was overwritten by WordPress.
 6. Legal PDF documents still need to be uploaded and linked on the documents page.
 7. Full article migration still needs source text/images from the old site.
-8. Public donation pages are published; the active YooKassa donation form is temporarily removed from `/donate/` until YooKassa is configured for voluntary donations without fiscal receipts for goods, works or services.
+8. Public donation pages are published with the active YooKassa donation form.
 
 ## 7. Donations
 
@@ -72,9 +72,10 @@ Required runtime secrets:
 2. Page `https://nkolinka.ru/donation-offer/` is published.
 3. Privacy policy is updated for donation payment processing and YooKassa data transfer.
 4. Home page contains a `Пожертвовать` CTA.
-5. The donation page temporarily has no active YooKassa form.
+5. The donation page has active YooKassa redirect integration through runtime secrets.
 6. The donation page states that donations are not payment for goods, services, courses, consultations or software.
 7. Active Lockbox version `e6q9ie2tthsjopg8t0bd` sets `YOOKASSA_SEND_RECEIPT=false`.
+8. YooKassa receipts are disabled for contract `НЭК.451387.01`; test payment creation without `receipt` returned a YooMoney checkout redirect.
 
 ## 8. WordPress Users
 
