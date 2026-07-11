@@ -180,7 +180,7 @@ function linka_nko_build_yookassa_payload(int $amount, string $donor_name, strin
         'capture' => true,
         'confirmation' => [
             'type' => 'redirect',
-            'return_url' => getenv('YOOKASSA_RETURN_URL') ?: home_url('/donate/?donation=started'),
+            'return_url' => getenv('YOOKASSA_RETURN_URL') ?: home_url('/donation-thanks/'),
         ],
         'description' => $description,
         'metadata' => [

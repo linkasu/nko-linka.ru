@@ -70,12 +70,14 @@ Required runtime secrets:
 
 1. Page `https://nkolinka.ru/donate/` is published.
 2. Page `https://nkolinka.ru/donation-offer/` is published.
-3. Privacy policy is updated for donation payment processing and YooKassa data transfer.
-4. Home page contains a `Пожертвовать` CTA.
-5. The donation page has active YooKassa redirect integration through runtime secrets.
-6. The donation page states that donations are not payment for goods, services, courses, consultations or software.
-7. Active Lockbox version `e6q9ie2tthsjopg8t0bd` sets `YOOKASSA_SEND_RECEIPT=false`.
-8. YooKassa receipts are disabled for contract `НЭК.451387.01`; test payment creation without `receipt` returned a YooMoney checkout redirect.
+3. Page `https://nkolinka.ru/donation-thanks/` is published as the YooKassa return page.
+4. Privacy policy is updated for donation payment processing and YooKassa data transfer.
+5. Home page contains a `Пожертвовать` CTA.
+6. The donation page has active YooKassa redirect integration through runtime secrets.
+7. The donation page states that donations are not payment for goods, services, courses, consultations or software.
+8. Active Lockbox version `e6qqa7iot110s39g9n58` sets `YOOKASSA_SEND_RECEIPT=false` and `YOOKASSA_RETURN_URL=https://nkolinka.ru/donation-thanks/`.
+9. YooKassa receipts are disabled for contract `НЭК.451387.01`; test payment creation without `receipt` returned a YooMoney checkout redirect.
+10. Completed donations are not currently written into custom WordPress database tables; YooKassa remains the payment source of truth.
 
 ## 8. WordPress Users
 

@@ -92,14 +92,17 @@ Service accounts:
 
 - Page `https://nkolinka.ru/donate/` is published.
 - Page `https://nkolinka.ru/donation-offer/` is published.
+- Page `https://nkolinka.ru/donation-thanks/` is published as the YooKassa return page.
 - Page `https://nkolinka.ru/privacy-policy/` is updated for voluntary donation payment processing and YooKassa data transfer.
 - Page `https://nkolinka.ru/requisites/` states that payment requisites are not published on the site.
 - Home page has a `Пожертвовать` CTA.
 - Main menu has a `Пожертвовать` item.
 - Donation page contains the active `[linka_donation_form]` shortcode.
 - The form creates YooKassa payments server-side without a `receipt` object and redirects the donor to the YooKassa confirmation URL.
+- Completed donations are not currently written into custom WordPress database tables; YooKassa remains the payment source of truth.
 - Runtime YooKassa env vars are bound to active Serverless Container revision `bba024ip5isf0e4bcvqr` from Lockbox secret `nko-linka-yookassa`.
-- Lockbox version `e6q9ie2tthsjopg8t0bd` sets `YOOKASSA_SEND_RECEIPT=false`.
+- Lockbox version `e6qqa7iot110s39g9n58` sets `YOOKASSA_SEND_RECEIPT=false` and `YOOKASSA_RETURN_URL=https://nkolinka.ru/donation-thanks/`.
+- Read-only DB check on 2026-07-12 found no donation/payment tables and no local WordPress payment record for the 500 RUB test payment.
 - YooKassa email on 2026-07-12 confirmed that automatic receipts were disabled for contract `НЭК.451387.01`; the support reply confirmed that no special payment scenario or description is required for voluntary donations.
 - Donation page states that a donation is not payment for goods, services, courses, consultations, software or digital services.
 - Public verification on 2026-07-12: `/`, `/donate/`, and `/healthz.php` returned `200`; `/donate/` rendered the donation form and submit button.
@@ -163,6 +166,7 @@ MariaDB backup check:
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260709T102653Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260709T104810Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260711T220949Z.sql.gz
+/home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260711T221645Z.sql.gz
 ```
 
 Current Docker named volumes list is empty from `docker volume ls` output; MariaDB uses bind mounts in `/home/aacidov/nko-linka-db`.

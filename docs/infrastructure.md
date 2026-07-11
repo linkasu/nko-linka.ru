@@ -63,7 +63,7 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 - Required runtime secrets: `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`.
 - Optional runtime configuration: `YOOKASSA_RETURN_URL`, `YOOKASSA_SEND_RECEIPT`, `YOOKASSA_VAT_CODE`, `YOOKASSA_PAYMENT_SUBJECT`, `YOOKASSA_TAX_SYSTEM_CODE`.
 - YooKassa secrets must be stored in Lockbox and bound to the Serverless Container environment; never commit them.
-- Production YooKassa secret: Lockbox `nko-linka-yookassa`, id `e6q8l62gpq6o2hgserti`, version `e6q9ie2tthsjopg8t0bd`.
+- Production YooKassa secret: Lockbox `nko-linka-yookassa`, id `e6q8l62gpq6o2hgserti`, version `e6qqa7iot110s39g9n58`.
 - `YOOKASSA_SEND_RECEIPT=false` is bound in the active revision; YooKassa confirmed that payments can be accepted without `receipt` after disabling YooKassa receipts for this shop.
 
 ## CI/CD
