@@ -683,11 +683,21 @@ function linka_nko_mark_payment_failed(int $payment_id, string $reason): void
 {
     global $wpdb;
     $tables = linka_nko_donation_tables();
+    $subscription_id = (int) $wpdb->get_var($wpdb->prepare("SELECT subscription_id FROM {$tables['payments']} WHERE id = %d", $payment_id));
+
     $wpdb->update($tables['payments'], [
         'status' => 'failed',
         'cancellation_reason' => $reason,
         'updated_at' => linka_nko_utc_now(),
     ], ['id' => $payment_id], ['%s', '%s', '%s'], ['%d']);
+
+    if ($subscription_id > 0) {
+        $wpdb->update($tables['subscriptions'], [
+            'status' => 'failed',
+            'failed_attempts' => 1,
+            'updated_at' => linka_nko_utc_now(),
+        ], ['id' => $subscription_id], ['%s', '%d', '%s'], ['%d']);
+    }
 }
 
 function linka_nko_log_bad_yookassa_response(int $status_code, $body): void

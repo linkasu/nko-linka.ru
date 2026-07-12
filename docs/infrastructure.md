@@ -27,7 +27,7 @@ User -> nkolinka.ru -> API Gateway d5dmjh8ur6ogqs55jbqn -> Serverless Container 
 - TLS: managed certificate in YC Certificate Manager, certificate id `fpqfb4bbj47ppclem208`, status `ISSUED`.
 - Outbound email: Yandex Cloud Postbox, domain identity `nkolinka.ru`, DKIM selector `pb20260705`.
 - Donations: YooKassa redirect checkout, enabled only when runtime `YOOKASSA_*` secrets are bound.
-- Active production revision: `bbainuqse0d3thjkta9r`, image digest `sha256:92f180f77714ae50855f3a211db85c3fd5a64e8a35b8f55fc9dd9defe662f2a1`.
+- Active production revision: `bbakhuhut5jqv8j0gir5`, image digest `sha256:ff3d21cbfa783c32193dc9bec5a1a6012417a93d0ebea1c9ed54f8775fb769ed`.
 
 ## WordPress Runtime Requirements
 
@@ -62,10 +62,11 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 - Payment is created server-side through YooKassa API and redirects the donor to YooKassa confirmation URL.
 - One-time donations explicitly set `save_payment_method=false`, so YooKassa can show all regular payment methods enabled for the shop without saving the payment method.
 - Monthly donations are implemented behind `YOOKASSA_RECURRING_ENABLED`; they require YooKassa production autopayments, save the payment method on the first payment, process webhooks, and use a protected recurring runner endpoint.
+- Direct YooKassa production test on 2026-07-12 returned `403 forbidden` for `save_payment_method=true`: the store cannot make recurring payments until YooKassa enables autopayments.
 - Required runtime secrets: `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`.
 - Optional runtime configuration: `YOOKASSA_RETURN_URL`, `YOOKASSA_SEND_RECEIPT`, `YOOKASSA_VAT_CODE`, `YOOKASSA_PAYMENT_SUBJECT`, `YOOKASSA_TAX_SYSTEM_CODE`, `YOOKASSA_RECURRING_ENABLED`, `LINKA_NKO_RECURRING_TOKEN`.
 - YooKassa secrets must be stored in Lockbox and bound to the Serverless Container environment; never commit them.
-- Production YooKassa secret: Lockbox `nko-linka-yookassa`, id `e6q8l62gpq6o2hgserti`, version `e6qqa7iot110s39g9n58`.
+- Production YooKassa secret: Lockbox `nko-linka-yookassa`, id `e6q8l62gpq6o2hgserti`, version `e6q1mtuhbkvj05fgs8ch`.
 - `YOOKASSA_SEND_RECEIPT=false` is bound in the active revision; YooKassa confirmed that payments can be accepted without `receipt` after disabling YooKassa receipts for this shop.
 
 ## CI/CD

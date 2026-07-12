@@ -19,7 +19,9 @@
 Current folder resources after initial setup:
 
 - Serverless Container: `nko-linka-wordpress`, id `bba644mi7027h56etnsd`, URL `https://bba644mi7027h56etnsd.containers.yandexcloud.net/`.
-- Active revision with YooKassa receipt sending off, thank-you return URL, and recurring donation groundwork: `bbainuqse0d3thjkta9r`, image digest `sha256:92f180f77714ae50855f3a211db85c3fd5a64e8a35b8f55fc9dd9defe662f2a1`, execution timeout `300s`.
+- Active revision with YooKassa receipt sending off, thank-you return URL, recurring donation groundwork, and recurring runtime disabled after YooKassa rejection: `bbakhuhut5jqv8j0gir5`, image digest `sha256:ff3d21cbfa783c32193dc9bec5a1a6012417a93d0ebea1c9ed54f8775fb769ed`, execution timeout `300s`.
+- Previous attempted recurring-enabled revision: `bba2nq4aj5eprsnj5is6`.
+- Previous recurring-groundwork revision: `bbainuqse0d3thjkta9r`.
 - Previous thank-you return URL revision: `bbauqmvqv5grsaocecct`.
 - Previous receipt-off revision: `bba024ip5isf0e4bcvqr`.
 - Previous CI-built revision with receipt sending and CSS cache bump: `bba3urejva5ml83m3o6o`.
@@ -42,7 +44,7 @@ Current folder resources after initial setup:
 - Lockbox secret: `nko-linka-wordpress-runtime`, id `e6q3r0sba4cimi3e671g`.
 - Lockbox secret: `nko-linka-postbox`, id `e6qavstvb3jaj59ptjus`, current version `e6q4q143o82o60f012dj`.
 - Lockbox secret: `nko-linka-wordpress-users`, id `e6q718pinteavidarcs3`, current version `e6qnkv6gpslq1qp6q16o`.
-- Lockbox secret: `nko-linka-yookassa`, id `e6q8l62gpq6o2hgserti`, current version `e6qqa7iot110s39g9n58`.
+- Lockbox secret: `nko-linka-yookassa`, id `e6q8l62gpq6o2hgserti`, current version `e6q1mtuhbkvj05fgs8ch`.
 
 Service accounts:
 
@@ -68,8 +70,8 @@ Service accounts:
 - Public verification on 2026-07-05: `https://nkolinka.ru/`, `/programs/`, `/wp-login.php`, and `/healthz.php` returned `200` with valid TLS.
 - `https://nkolinka.ru/wp-admin` redirects to `https://nkolinka.ru/wp-admin/`, then to the WordPress login page without leaking `:8080`.
 - Pretty permalinks are enabled with `/%postname%/`; Apache rewrite fallback is enabled in revision `bba9gv4igtssask5na1g`.
-- Apache rewrite fallback and `/wp-admin` canonical redirect are baked into active revision `bbainuqse0d3thjkta9r`; no startup-command hotfix is used in the active revision.
-- WordPress admin updater prerequisites are baked into active revision `bbainuqse0d3thjkta9r`: runtime-created writable `/tmp/wordpress`, `FS_METHOD=direct`, `WP_TEMP_DIR=/tmp/wordpress`, PHP `sys_temp_dir=/tmp/wordpress`, PHP `upload_tmp_dir=/tmp/wordpress`, PHP `max_execution_time=300`, container `execution_timeout=300s`.
+- Apache rewrite fallback and `/wp-admin` canonical redirect are baked into active revision `bbakhuhut5jqv8j0gir5`; no startup-command hotfix is used in the active revision.
+- WordPress admin updater prerequisites are baked into active revision `bbakhuhut5jqv8j0gir5`: runtime-created writable `/tmp/wordpress`, `FS_METHOD=direct`, `WP_TEMP_DIR=/tmp/wordpress`, PHP `sys_temp_dir=/tmp/wordpress`, PHP `upload_tmp_dir=/tmp/wordpress`, PHP `max_execution_time=300`, container `execution_timeout=300s`.
 - Main menu is assigned to theme location `primary` and includes the public voluntary donation page link.
 - Chrome DevTools Protocol check on 2026-07-05: clicking the home CTA `Смотреть программы` navigated to `https://nkolinka.ru/programs/`, page title `Программы – АНО Линка`, `h1` `Программы`, no console exceptions, no 4xx/5xx page resources.
 - Public home HTML contains a `Пожертвовать` CTA to `/donate/`.
@@ -88,7 +90,7 @@ Service accounts:
 - TXT `_dmarc.nkolinka.ru.` -> `v=DMARC1;p=none`.
 - SMTP host: `postbox.cloud.yandex.net`, STARTTLS port `587`, SMTPS port `465`.
 - SMTP/API secrets are stored in Lockbox secret `nko-linka-postbox` and removed from the local temp directory.
-- WordPress Postbox SMTP env vars are bound to active Serverless Container revision `bbainuqse0d3thjkta9r`.
+- WordPress Postbox SMTP env vars are bound to active Serverless Container revision `bbakhuhut5jqv8j0gir5`.
 
 ## Donations
 
@@ -106,11 +108,14 @@ Service accounts:
 - Monthly donation code is prepared behind `YOOKASSA_RECURRING_ENABLED`; it uses `save_payment_method=true` on the first payment, stores `payment_method.id` after YooKassa confirmation, and charges subsequent donations through a protected recurring runner endpoint.
 - YooKassa webhook endpoint is `https://nkolinka.ru/wp-admin/admin-post.php?action=linka_nko_yookassa_webhook`.
 - Recurring runner endpoint is `https://nkolinka.ru/wp-admin/admin-post.php?action=linka_nko_run_recurring_donations&token=...`; it requires `LINKA_NKO_RECURRING_TOKEN`.
-- Runtime YooKassa env vars are bound to active Serverless Container revision `bbainuqse0d3thjkta9r` from Lockbox secret `nko-linka-yookassa`.
-- Lockbox version `e6qqa7iot110s39g9n58` sets `YOOKASSA_SEND_RECEIPT=false` and `YOOKASSA_RETURN_URL=https://nkolinka.ru/donation-thanks/`.
-- Production recurring runtime is not enabled yet; YooKassa production autopayments must be connected first.
+- Runtime YooKassa env vars are bound to active Serverless Container revision `bbakhuhut5jqv8j0gir5` from Lockbox secret `nko-linka-yookassa`.
+- Lockbox version `e6q1mtuhbkvj05fgs8ch` sets `YOOKASSA_SEND_RECEIPT=false`, `YOOKASSA_RETURN_URL=https://nkolinka.ru/donation-thanks/`, `YOOKASSA_RECURRING_ENABLED=false`, and a protected recurring runner token.
+- Production recurring runtime was tested and then disabled because YooKassa has not enabled autopayments for this store.
+- Direct YooKassa production capability test on 2026-07-12 with `save_payment_method=true` returned `403 forbidden`, `This store can't make recurring payments. Contact the YooMoney manager to learn more`.
+- YooKassa webhook API check on 2026-07-12 with Basic Auth returned `401 invalid_credentials`, `Authentication type is not allowed`; for this integration, webhooks must be configured in the YooKassa Merchant Profile.
 - Production deploy on 2026-07-12 created the donation tables and verified one-time test payment creation: local payment id `1`, YooKassa payment `31e5449b-000f-5001-9000-135353b43777`, status `pending`, unpaid, `frequency=one_time`, `payment_method_saved=0`.
 - Forced monthly POST on 2026-07-12 returned `503` before creating a payment or subscription because `YOOKASSA_RECURRING_ENABLED` is unset.
+- Attempted recurring-enabled monthly POST on 2026-07-12 returned `502` after YooKassa rejected `save_payment_method=true`; local test payment id `3` was marked `failed` and local subscription id `1` should be treated as failed test data.
 - Read-only DB check on 2026-07-12 found no donation/payment tables and no local WordPress payment record for the 500 RUB test payment.
 - YooKassa API check on 2026-07-12 found a paid `500.00 RUB` payment with status `succeeded`.
 - YooKassa email on 2026-07-12 confirmed that automatic receipts were disabled for contract `НЭК.451387.01`; the support reply confirmed that no special payment scenario or description is required for voluntary donations.
@@ -178,6 +183,7 @@ MariaDB backup check:
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260711T220949Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260711T221645Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260712T061206Z.sql.gz
+/home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260712T062016Z.sql.gz
 ```
 
 Current Docker named volumes list is empty from `docker volume ls` output; MariaDB uses bind mounts in `/home/aacidov/nko-linka-db`.
