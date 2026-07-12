@@ -210,6 +210,19 @@ a:focus { outline: 3px solid var(--linka-green); outline-offset: 3px; }
   grid-column: 1 / -1;
 }
 
+.donation-form__frequency-status {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  background: #f7fbfa;
+  border: 1px solid var(--linka-border);
+  border-radius: 16px;
+}
+
+.donation-form__frequency-status span {
+  color: var(--linka-muted);
+}
+
 .donation-form__frequency label,
 .donation-form__amounts label,
 .donation-form__consent {
@@ -225,6 +238,30 @@ a:focus { outline: 3px solid var(--linka-green); outline-offset: 3px; }
 
 .donation-form__amounts:has(input[value="custom"]:checked) .donation-form__custom-amount {
   display: block !important;
+}
+
+.donation-form__consent {
+  padding: 14px 16px;
+  background: #f7fbfa;
+  border: 1px solid var(--linka-border);
+  border-radius: 16px;
+}
+
+.donation-form__consent input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+  accent-color: var(--linka-primary);
+}
+
+.donation-form__consent strong,
+.donation-form__consent span span {
+  display: block;
+}
+
+.donation-form__consent strong {
+  margin-bottom: 4px;
 }
 
 .donation-form__note {

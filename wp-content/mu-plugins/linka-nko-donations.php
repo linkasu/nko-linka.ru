@@ -43,25 +43,29 @@ function linka_nko_render_donation_form(): string
         <p class="notice">Прием пожертвований одобрен и сейчас настраивается. Платежная форма будет включена после добавления ключей YooKassa.</p>
       <?php endif; ?>
 
-      <?php if (!$recurring_enabled) : ?>
-        <p class="notice">Ежемесячные пожертвования технически подготовлены, но будут включены после подключения автоплатежей на стороне YooKassa.</p>
-      <?php endif; ?>
-
       <form class="donation-form__form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
         <input type="hidden" name="action" value="linka_nko_create_donation">
         <?php wp_nonce_field('linka_nko_create_donation', 'linka_nko_donation_nonce'); ?>
 
-        <fieldset class="donation-form__frequency">
-          <legend>Периодичность</legend>
-          <label>
-            <input type="radio" name="donation_frequency" value="<?php echo esc_attr(LINKA_NKO_DONATION_FREQUENCY_ONE_TIME); ?>" checked>
-            Разово
-          </label>
-          <label>
-            <input type="radio" name="donation_frequency" value="<?php echo esc_attr(LINKA_NKO_DONATION_FREQUENCY_MONTHLY); ?>" <?php disabled(!$recurring_enabled); ?>>
-            Ежемесячно
-          </label>
-        </fieldset>
+        <?php if ($recurring_enabled) : ?>
+          <fieldset class="donation-form__frequency">
+            <legend>Периодичность</legend>
+            <label>
+              <input type="radio" name="donation_frequency" value="<?php echo esc_attr(LINKA_NKO_DONATION_FREQUENCY_ONE_TIME); ?>" checked>
+              Разово
+            </label>
+            <label>
+              <input type="radio" name="donation_frequency" value="<?php echo esc_attr(LINKA_NKO_DONATION_FREQUENCY_MONTHLY); ?>">
+              Ежемесячно
+            </label>
+          </fieldset>
+        <?php else : ?>
+          <input type="hidden" name="donation_frequency" value="<?php echo esc_attr(LINKA_NKO_DONATION_FREQUENCY_ONE_TIME); ?>">
+          <div class="donation-form__frequency-status" aria-label="Периодичность пожертвования">
+            <strong>Разовое пожертвование</strong>
+            <span>Ежемесячные пожертвования появятся после подключения автоплатежей YooKassa.</span>
+          </div>
+        <?php endif; ?>
 
         <fieldset class="donation-form__amounts">
           <legend>Сумма пожертвования</legend>
@@ -93,7 +97,13 @@ function linka_nko_render_donation_form(): string
 
         <label class="donation-form__consent">
           <input type="checkbox" name="donor_consent" value="1" required>
-          <span>Я ознакомился с <a href="<?php echo esc_url(home_url('/donation-offer/')); ?>" target="_blank" rel="noopener">публичной офертой</a> и <a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>" target="_blank" rel="noopener">политикой обработки персональных данных</a>, согласен на обработку персональных данных и понимаю, что пожертвование не является оплатой товаров или услуг. Для ежемесячного пожертвования я также соглашаюсь на сохранение способа оплаты YooKassa и последующие ежемесячные списания выбранной суммы до отмены.</span>
+          <span>
+            <strong>Согласен с условиями</strong>
+            <span>Я ознакомился с <a href="<?php echo esc_url(home_url('/donation-offer/')); ?>" target="_blank" rel="noopener">публичной офертой</a> и <a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>" target="_blank" rel="noopener">политикой обработки персональных данных</a>, согласен на обработку персональных данных и понимаю, что пожертвование не является оплатой товаров или услуг.</span>
+            <?php if ($recurring_enabled) : ?>
+              <span>Для ежемесячного пожертвования я также соглашаюсь на сохранение способа оплаты YooKassa и последующие ежемесячные списания выбранной суммы до отмены.</span>
+            <?php endif; ?>
+          </span>
         </label>
 
         <p class="donation-form__note">После нажатия кнопки откроется платежная страница YooKassa со всеми доступными для магазина способами оплаты.</p>
