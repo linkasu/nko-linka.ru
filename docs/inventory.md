@@ -133,6 +133,7 @@ Service accounts:
 - YooKassa replied on 2026-07-12 that autopayment approval requires full-screen screenshots from the site with the site address visible.
 - Full-screen screenshots with the browser address bar visible were captured on 2026-07-12 at `/var/folders/l4/r3plyjwj7pz_nq7zz50x04880000gn/T/opencode/nko-yookassa-screenshots/donation-subscription-active-fullscreen.png` and `/var/folders/l4/r3plyjwj7pz_nq7zz50x04880000gn/T/opencode/nko-yookassa-screenshots/donation-subscription-cancelled-fullscreen.png`.
 - Updated full-screen screenshots were sent to YooKassa on 2026-07-12; response is pending.
+- YooKassa replied on 2026-07-12 that the autopayment request is under security review; typical review time is 1-2 business days, and YooKassa will email if additional questions arise.
 - Donation page states that a donation is not payment for goods, services, courses, consultations, software or digital services.
 - Public verification on 2026-07-12: `/`, `/donate/`, and `/healthz.php` returned `200`; `/donate/` rendered the donation form and submit button.
 - Test POST verification on 2026-07-12: WordPress donation handler returned `303` to `https://yoomoney.ru/checkout/payments/v2/contract` without sending `receipt`; no payment was completed.

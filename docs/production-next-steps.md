@@ -87,7 +87,8 @@ Required runtime secrets:
 17. YooKassa autopayment approval email with the screenshots was sent on 2026-07-12.
 18. YooKassa replied that the screenshots must be full-screen and show the site address.
 19. Full-screen screenshots with the browser address bar visible were captured and sent to YooKassa on 2026-07-12.
-20. Next step before enabling recurring payments: wait for YooKassa autopayment approval.
+20. YooKassa replied that the autopayment request is under security review; typical review time is 1-2 business days.
+21. Next step before enabling recurring payments: wait for YooKassa autopayment approval or additional questions from their security review.
 
 ## 8. WordPress Users
 
