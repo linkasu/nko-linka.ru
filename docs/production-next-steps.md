@@ -84,7 +84,8 @@ Required runtime secrets:
 14. T-Pay and SBP were added by YooKassa on 2026-07-12; `/v3/me` now returns `sbp` and `tinkoff_bank` in `payment_methods`.
 15. Self-service cancellation was deployed and verified on 2026-07-12: after cancellation the subscription becomes `canceled`, `payment_method_id=NULL`, `next_charge_at=NULL`, and no future runner charge is possible for that subscription.
 16. YooKassa approval screenshots were captured for the active management page and the cancelled confirmation page.
-17. Next step before enabling recurring payments: send YooKassa the self-service cancellation screenshots and wait for autopayment approval.
+17. YooKassa autopayment approval email with the screenshots was sent on 2026-07-12.
+18. Next step before enabling recurring payments: wait for YooKassa autopayment approval.
 
 ## 8. WordPress Users
 

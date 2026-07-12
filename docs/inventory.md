@@ -129,6 +129,7 @@ Service accounts:
 - YooKassa API check on 2026-07-12 found a paid `500.00 RUB` payment with status `succeeded`.
 - YooKassa email on 2026-07-12 confirmed that automatic receipts were disabled for contract `НЭК.451387.01`; the support reply confirmed that no special payment scenario or description is required for voluntary donations.
 - YooKassa email `31813` on 2026-07-12 confirmed that payment methods were added and asked to reply when the site is ready to connect autopayments.
+- YooKassa autopayment approval email with self-service cancellation screenshots was sent on 2026-07-12 to `ecommerce@yoomoney.ru` and `b2b_support@yoomoney.ru`; response is pending.
 - Donation page states that a donation is not payment for goods, services, courses, consultations, software or digital services.
 - Public verification on 2026-07-12: `/`, `/donate/`, and `/healthz.php` returned `200`; `/donate/` rendered the donation form and submit button.
 - Test POST verification on 2026-07-12: WordPress donation handler returned `303` to `https://yoomoney.ru/checkout/payments/v2/contract` without sending `receipt`; no payment was completed.
