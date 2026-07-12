@@ -36,6 +36,9 @@ jobs:
 
       - name: Smoke test
         run: |
+          docker run --rm \
+            ${{ env.LOCAL_IMAGE }} \
+            php -l /usr/src/wordpress/wp-content/mu-plugins/linka-nko-donations.php
           docker run -d --rm \
             --name nko-linka-wordpress-smoke \
             -p 8080:8080 \

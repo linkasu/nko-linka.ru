@@ -198,16 +198,19 @@ a:focus { outline: 3px solid var(--linka-green); outline-offset: 3px; }
   font: inherit;
 }
 
+.donation-form__frequency,
 .donation-form__amounts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px 16px;
 }
 
+.donation-form__frequency legend,
 .donation-form__amounts legend {
   grid-column: 1 / -1;
 }
 
+.donation-form__frequency label,
 .donation-form__amounts label,
 .donation-form__consent {
   display: flex;

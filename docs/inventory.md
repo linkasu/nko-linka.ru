@@ -100,9 +100,14 @@ Service accounts:
 - Main menu has a `Пожертвовать` item.
 - Donation page contains the active `[linka_donation_form]` shortcode.
 - The form creates YooKassa payments server-side without a `receipt` object and redirects the donor to the YooKassa confirmation URL.
-- Completed donations are not currently written into custom WordPress database tables; YooKassa remains the payment source of truth.
+- New donation payments are written into custom WordPress tables `wp_linka_donation_payments` and, for monthly donations, `wp_linka_donation_subscriptions`; YooKassa remains the payment source of truth.
+- One-time donations explicitly set `save_payment_method=false` so all regular YooKassa methods enabled for the shop remain available without saving the payment method.
+- Monthly donation code is prepared behind `YOOKASSA_RECURRING_ENABLED`; it uses `save_payment_method=true` on the first payment, stores `payment_method.id` after YooKassa confirmation, and charges subsequent donations through a protected recurring runner endpoint.
+- YooKassa webhook endpoint is `https://nkolinka.ru/wp-admin/admin-post.php?action=linka_nko_yookassa_webhook`.
+- Recurring runner endpoint is `https://nkolinka.ru/wp-admin/admin-post.php?action=linka_nko_run_recurring_donations&token=...`; it requires `LINKA_NKO_RECURRING_TOKEN`.
 - Runtime YooKassa env vars are bound to active Serverless Container revision `bbauqmvqv5grsaocecct` from Lockbox secret `nko-linka-yookassa`.
 - Lockbox version `e6qqa7iot110s39g9n58` sets `YOOKASSA_SEND_RECEIPT=false` and `YOOKASSA_RETURN_URL=https://nkolinka.ru/donation-thanks/`.
+- Production recurring runtime is not enabled yet; YooKassa production autopayments must be connected first.
 - Read-only DB check on 2026-07-12 found no donation/payment tables and no local WordPress payment record for the 500 RUB test payment.
 - YooKassa API check on 2026-07-12 found a paid `500.00 RUB` payment with status `succeeded`.
 - YooKassa email on 2026-07-12 confirmed that automatic receipts were disabled for contract `НЭК.451387.01`; the support reply confirmed that no special payment scenario or description is required for voluntary donations.

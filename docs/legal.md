@@ -38,6 +38,7 @@ The full legal address is present in public EGRUL documents. For v1:
 - Before enabling real payments, publish a donation offer and update the personal data policy.
 - Active payment form is enabled after YooKassa approval through runtime secrets; donations must remain voluntary and not be presented as payment for goods or services.
 - Do not issue receipts that describe voluntary donations as goods, works, services, courses, consultations, software or digital products.
+- Monthly voluntary donations require explicit donor consent for the amount, frequency, saved payment method, and cancellation process. They must be enabled only after YooKassa enables production autopayments for the shop.
 
 ## Nonprofit Transparency
 

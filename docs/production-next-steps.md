@@ -78,6 +78,7 @@ Required runtime secrets:
 8. Active Lockbox version `e6qqa7iot110s39g9n58` sets `YOOKASSA_SEND_RECEIPT=false` and `YOOKASSA_RETURN_URL=https://nkolinka.ru/donation-thanks/`.
 9. YooKassa receipts are disabled for contract `НЭК.451387.01`; test payment creation without `receipt` returned a YooMoney checkout redirect.
 10. Completed donations are not currently written into custom WordPress database tables; YooKassa remains the payment source of truth.
+11. Recurring donation code is prepared behind `YOOKASSA_RECURRING_ENABLED=false`; production activation still requires YooKassa autopayments to be enabled for the shop.
 
 ## 8. WordPress Users
 
