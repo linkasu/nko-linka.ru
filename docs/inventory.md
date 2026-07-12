@@ -19,7 +19,8 @@
 Current folder resources after initial setup:
 
 - Serverless Container: `nko-linka-wordpress`, id `bba644mi7027h56etnsd`, URL `https://bba644mi7027h56etnsd.containers.yandexcloud.net/`.
-- Active revision with YooKassa receipt sending off, thank-you return URL, recurring donation groundwork, and recurring runtime disabled after YooKassa rejection: `bbakhuhut5jqv8j0gir5`, image digest `sha256:ff3d21cbfa783c32193dc9bec5a1a6012417a93d0ebea1c9ed54f8775fb769ed`, execution timeout `300s`.
+- Active revision with donation form mobile UX fix, YooKassa receipt sending off, thank-you return URL, recurring donation groundwork, and recurring runtime disabled after YooKassa rejection: `bbaolpgu74iar2u89o7l`, image digest `sha256:f284bf21f43a0080161d3bd191c5c0032ac7e2cab32fa89977296a106c4dc23b`, execution timeout `300s`.
+- Previous recurring-disabled revision: `bbakhuhut5jqv8j0gir5`.
 - Previous attempted recurring-enabled revision: `bba2nq4aj5eprsnj5is6`.
 - Previous recurring-groundwork revision: `bbainuqse0d3thjkta9r`.
 - Previous thank-you return URL revision: `bbauqmvqv5grsaocecct`.
@@ -70,8 +71,8 @@ Service accounts:
 - Public verification on 2026-07-05: `https://nkolinka.ru/`, `/programs/`, `/wp-login.php`, and `/healthz.php` returned `200` with valid TLS.
 - `https://nkolinka.ru/wp-admin` redirects to `https://nkolinka.ru/wp-admin/`, then to the WordPress login page without leaking `:8080`.
 - Pretty permalinks are enabled with `/%postname%/`; Apache rewrite fallback is enabled in revision `bba9gv4igtssask5na1g`.
-- Apache rewrite fallback and `/wp-admin` canonical redirect are baked into active revision `bbakhuhut5jqv8j0gir5`; no startup-command hotfix is used in the active revision.
-- WordPress admin updater prerequisites are baked into active revision `bbakhuhut5jqv8j0gir5`: runtime-created writable `/tmp/wordpress`, `FS_METHOD=direct`, `WP_TEMP_DIR=/tmp/wordpress`, PHP `sys_temp_dir=/tmp/wordpress`, PHP `upload_tmp_dir=/tmp/wordpress`, PHP `max_execution_time=300`, container `execution_timeout=300s`.
+- Apache rewrite fallback and `/wp-admin` canonical redirect are baked into active revision `bbaolpgu74iar2u89o7l`; no startup-command hotfix is used in the active revision.
+- WordPress admin updater prerequisites are baked into active revision `bbaolpgu74iar2u89o7l`: runtime-created writable `/tmp/wordpress`, `FS_METHOD=direct`, `WP_TEMP_DIR=/tmp/wordpress`, PHP `sys_temp_dir=/tmp/wordpress`, PHP `upload_tmp_dir=/tmp/wordpress`, PHP `max_execution_time=300`, container `execution_timeout=300s`.
 - Main menu is assigned to theme location `primary` and includes the public voluntary donation page link.
 - Chrome DevTools Protocol check on 2026-07-05: clicking the home CTA `Смотреть программы` navigated to `https://nkolinka.ru/programs/`, page title `Программы – АНО Линка`, `h1` `Программы`, no console exceptions, no 4xx/5xx page resources.
 - Public home HTML contains a `Пожертвовать` CTA to `/donate/`.
@@ -90,7 +91,7 @@ Service accounts:
 - TXT `_dmarc.nkolinka.ru.` -> `v=DMARC1;p=none`.
 - SMTP host: `postbox.cloud.yandex.net`, STARTTLS port `587`, SMTPS port `465`.
 - SMTP/API secrets are stored in Lockbox secret `nko-linka-postbox` and removed from the local temp directory.
-- WordPress Postbox SMTP env vars are bound to active Serverless Container revision `bbakhuhut5jqv8j0gir5`.
+- WordPress Postbox SMTP env vars are bound to active Serverless Container revision `bbaolpgu74iar2u89o7l`.
 
 ## Donations
 
@@ -102,13 +103,14 @@ Service accounts:
 - Home page has a `Пожертвовать` CTA.
 - Main menu has a `Пожертвовать` item.
 - Donation page contains the active `[linka_donation_form]` shortcode.
+- Donation form mobile UX fix on 2026-07-12: when recurring runtime is disabled, monthly donations are shown as a non-clickable status instead of a disabled radio button; consent is displayed as a separate highlighted checkbox block.
 - The form creates YooKassa payments server-side without a `receipt` object and redirects the donor to the YooKassa confirmation URL.
 - New donation payments are written into custom WordPress tables `wp_linka_donation_payments` and, for monthly donations, `wp_linka_donation_subscriptions`; YooKassa remains the payment source of truth.
 - One-time donations explicitly set `save_payment_method=false` so all regular YooKassa methods enabled for the shop remain available without saving the payment method.
 - Monthly donation code is prepared behind `YOOKASSA_RECURRING_ENABLED`; it uses `save_payment_method=true` on the first payment, stores `payment_method.id` after YooKassa confirmation, and charges subsequent donations through a protected recurring runner endpoint.
 - YooKassa webhook endpoint is `https://nkolinka.ru/wp-admin/admin-post.php?action=linka_nko_yookassa_webhook`.
 - Recurring runner endpoint is `https://nkolinka.ru/wp-admin/admin-post.php?action=linka_nko_run_recurring_donations&token=...`; it requires `LINKA_NKO_RECURRING_TOKEN`.
-- Runtime YooKassa env vars are bound to active Serverless Container revision `bbakhuhut5jqv8j0gir5` from Lockbox secret `nko-linka-yookassa`.
+- Runtime YooKassa env vars are bound to active Serverless Container revision `bbaolpgu74iar2u89o7l` from Lockbox secret `nko-linka-yookassa`.
 - Lockbox version `e6q1mtuhbkvj05fgs8ch` sets `YOOKASSA_SEND_RECEIPT=false`, `YOOKASSA_RETURN_URL=https://nkolinka.ru/donation-thanks/`, `YOOKASSA_RECURRING_ENABLED=false`, and a protected recurring runner token.
 - Production recurring runtime was tested and then disabled because YooKassa has not enabled autopayments for this store.
 - Direct YooKassa production capability test on 2026-07-12 with `save_payment_method=true` returned `403 forbidden`, `This store can't make recurring payments. Contact the YooMoney manager to learn more`.
@@ -184,6 +186,7 @@ MariaDB backup check:
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260711T221645Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260712T061206Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260712T062016Z.sql.gz
+/home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260712T080753Z.sql.gz
 ```
 
 Current Docker named volumes list is empty from `docker volume ls` output; MariaDB uses bind mounts in `/home/aacidov/nko-linka-db`.
