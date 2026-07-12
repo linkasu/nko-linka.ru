@@ -53,7 +53,7 @@ Required runtime secrets:
 7. Public `https://nkolinka.ru`, `/programs/`, `/wp-login.php`, and `/healthz.php` verified after DNS/API Gateway propagation.
 8. Runtime hotfix revision `bbais7f2cudasnda2pit` fixes Apache `/wp-admin` redirect from leaking internal port `8080`.
 9. Runtime hotfix revision `bba9gv4igtssask5na1g` enables Apache rewrite fallback and WordPress pretty permalinks.
-10. Revision `bbauqmvqv5grsaocecct` is active and includes Apache fixes, Postbox SMTP configuration, writable admin updater temp directory, CSS cache version `0.1.1`, YooKassa receipt sending disabled, and the thank-you return URL.
+10. Revision `bbainuqse0d3thjkta9r` is active and includes Apache fixes, Postbox SMTP configuration, writable admin updater temp directory, CSS cache version `0.1.1`, YooKassa receipt sending disabled, the thank-you return URL, and recurring donation groundwork.
 
 ## 6. Content Import
 
@@ -78,7 +78,7 @@ Required runtime secrets:
 8. Active Lockbox version `e6qqa7iot110s39g9n58` sets `YOOKASSA_SEND_RECEIPT=false` and `YOOKASSA_RETURN_URL=https://nkolinka.ru/donation-thanks/`.
 9. YooKassa receipts are disabled for contract `НЭК.451387.01`; test payment creation without `receipt` returned a YooMoney checkout redirect.
 10. Completed donations are not currently written into custom WordPress database tables; YooKassa remains the payment source of truth.
-11. Recurring donation code is prepared behind `YOOKASSA_RECURRING_ENABLED=false`; production activation still requires YooKassa autopayments to be enabled for the shop.
+11. Recurring donation code is prepared behind `YOOKASSA_RECURRING_ENABLED=false`; production activation still requires YooKassa autopayments to be enabled for the shop. One-time payments remain active and use all regular YooKassa methods enabled for the shop.
 
 ## 8. WordPress Users
 
