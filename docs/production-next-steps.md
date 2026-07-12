@@ -85,7 +85,9 @@ Required runtime secrets:
 15. Self-service cancellation was deployed and verified on 2026-07-12: after cancellation the subscription becomes `canceled`, `payment_method_id=NULL`, `next_charge_at=NULL`, and no future runner charge is possible for that subscription.
 16. YooKassa approval screenshots were captured for the active management page and the cancelled confirmation page.
 17. YooKassa autopayment approval email with the screenshots was sent on 2026-07-12.
-18. Next step before enabling recurring payments: wait for YooKassa autopayment approval.
+18. YooKassa replied that the screenshots must be full-screen and show the site address.
+19. Full-screen screenshots with the browser address bar visible were captured and sent to YooKassa on 2026-07-12.
+20. Next step before enabling recurring payments: wait for YooKassa autopayment approval.
 
 ## 8. WordPress Users
 

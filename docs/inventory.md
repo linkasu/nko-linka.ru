@@ -130,6 +130,9 @@ Service accounts:
 - YooKassa email on 2026-07-12 confirmed that automatic receipts were disabled for contract `НЭК.451387.01`; the support reply confirmed that no special payment scenario or description is required for voluntary donations.
 - YooKassa email `31813` on 2026-07-12 confirmed that payment methods were added and asked to reply when the site is ready to connect autopayments.
 - YooKassa autopayment approval email with self-service cancellation screenshots was sent on 2026-07-12 to `ecommerce@yoomoney.ru` and `b2b_support@yoomoney.ru`; response is pending.
+- YooKassa replied on 2026-07-12 that autopayment approval requires full-screen screenshots from the site with the site address visible.
+- Full-screen screenshots with the browser address bar visible were captured on 2026-07-12 at `/var/folders/l4/r3plyjwj7pz_nq7zz50x04880000gn/T/opencode/nko-yookassa-screenshots/donation-subscription-active-fullscreen.png` and `/var/folders/l4/r3plyjwj7pz_nq7zz50x04880000gn/T/opencode/nko-yookassa-screenshots/donation-subscription-cancelled-fullscreen.png`.
+- Updated full-screen screenshots were sent to YooKassa on 2026-07-12; response is pending.
 - Donation page states that a donation is not payment for goods, services, courses, consultations, software or digital services.
 - Public verification on 2026-07-12: `/`, `/donate/`, and `/healthz.php` returned `200`; `/donate/` rendered the donation form and submit button.
 - Test POST verification on 2026-07-12: WordPress donation handler returned `303` to `https://yoomoney.ru/checkout/payments/v2/contract` without sending `receipt`; no payment was completed.
@@ -198,6 +201,7 @@ MariaDB backup check:
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260712T062016Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260712T080753Z.sql.gz
 /home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260712T125023Z.sql.gz
+/home/aacidov/nko-linka-db/backups/nko-linka-wordpress-20260712T133012Z.sql.gz
 ```
 
 Current Docker named volumes list is empty from `docker volume ls` output; MariaDB uses bind mounts in `/home/aacidov/nko-linka-db`.
