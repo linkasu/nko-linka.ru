@@ -27,7 +27,7 @@ User -> nkolinka.ru -> API Gateway d5dmjh8ur6ogqs55jbqn -> Serverless Container 
 - TLS: managed certificate in YC Certificate Manager, certificate id `fpqfb4bbj47ppclem208`, status `ISSUED`.
 - Outbound email: Yandex Cloud Postbox, domain identity `nkolinka.ru`, DKIM selector `pb20260705`.
 - Donations: YooKassa redirect checkout, enabled only when runtime `YOOKASSA_*` secrets are bound.
-- Active production revision: `bbaolpgu74iar2u89o7l`, image digest `sha256:f284bf21f43a0080161d3bd191c5c0032ac7e2cab32fa89977296a106c4dc23b`.
+- Active production revision: `bbau0c7fe7p14lr1v4p1`, image digest `sha256:c753b7ed99cc9fae09bcb480864db665f33126862cf8b5bdcbaa9baf7f2329bd`.
 
 ## WordPress Runtime Requirements
 
@@ -63,7 +63,7 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 - One-time donations explicitly set `save_payment_method=false`, so YooKassa can show all regular payment methods enabled for the shop without saving the payment method.
 - YooKassa `/v3/me` on 2026-07-12 reports enabled payment methods `yoo_money`, `bank_card`, `sberbank`, `sbp`, and `tinkoff_bank`; `fiscalization_enabled=false`.
 - Monthly donations are implemented behind `YOOKASSA_RECURRING_ENABLED`; they require YooKassa production autopayments, save the payment method on the first payment, process webhooks, and use a protected recurring runner endpoint.
-- Self-service monthly donation management is implemented at `/donation-subscription/` through a protected email link. The cancellation flow sets the subscription to `canceled`, clears `payment_method_id`, removes local saved payment method identifiers for the subscription payments, and stops future charges.
+- Self-service monthly donation management is deployed at `/donation-subscription/` through a protected email link. The cancellation flow sets the subscription to `canceled`, clears `payment_method_id`, removes local saved payment method identifiers for the subscription payments, and stops future charges.
 - The monthly activation email contains the management link. The cancellation email confirms that the saved payment method was removed from the site system.
 - Direct YooKassa production test on 2026-07-12 returned `403 forbidden` for `save_payment_method=true`: the store cannot make recurring payments until YooKassa enables autopayments.
 - Required runtime secrets: `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`.
@@ -78,7 +78,7 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 - GitHub Actions builds and publishes image.
 - Deployment updates YC Serverless Container revision.
 - Secrets live in GitHub Actions and YC runtime secrets/Lockbox.
-- Current production revision is a CI-built image with Apache canonical redirect fixes, WordPress Postbox SMTP configuration, and the YooKassa donation form baked in.
+- Current production revision is a CI-built image with Apache canonical redirect fixes, WordPress Postbox SMTP configuration, the YooKassa donation form, and self-service monthly donation cancellation baked in.
 - WordPress admin-managed updates use direct filesystem writes, a runtime-created writable temp directory `/tmp/wordpress`, and longer container/PHP timeouts than public page requests.
 
 ## Open Technical Tasks

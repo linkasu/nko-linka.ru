@@ -53,7 +53,7 @@ Required runtime secrets:
 7. Public `https://nkolinka.ru`, `/programs/`, `/wp-login.php`, and `/healthz.php` verified after DNS/API Gateway propagation.
 8. Runtime hotfix revision `bbais7f2cudasnda2pit` fixes Apache `/wp-admin` redirect from leaking internal port `8080`.
 9. Runtime hotfix revision `bba9gv4igtssask5na1g` enables Apache rewrite fallback and WordPress pretty permalinks.
-10. Revision `bbaolpgu74iar2u89o7l` is active and includes Apache fixes, Postbox SMTP configuration, writable admin updater temp directory, CSS cache version `0.1.1`, YooKassa receipt sending disabled, the thank-you return URL, recurring donation groundwork with recurring runtime disabled, and the mobile donation form UX fix.
+10. Revision `bbau0c7fe7p14lr1v4p1` is active and includes Apache fixes, Postbox SMTP configuration, writable admin updater temp directory, CSS cache version `0.1.2`, YooKassa receipt sending disabled, the thank-you return URL, recurring donation groundwork with recurring runtime disabled, mobile donation form UX fix, and self-service recurring cancellation.
 
 ## 6. Content Import
 
@@ -71,18 +71,20 @@ Required runtime secrets:
 1. Page `https://nkolinka.ru/donate/` is published.
 2. Page `https://nkolinka.ru/donation-offer/` is published.
 3. Page `https://nkolinka.ru/donation-thanks/` is published as the YooKassa return page.
-4. Privacy policy is updated for donation payment processing and YooKassa data transfer.
-5. Home page contains a `Пожертвовать` CTA.
-6. The donation page has active YooKassa redirect integration through runtime secrets.
-7. The donation page states that donations are not payment for goods, services, courses, consultations or software.
-8. Active Lockbox version `e6q1mtuhbkvj05fgs8ch` sets `YOOKASSA_SEND_RECEIPT=false`, `YOOKASSA_RETURN_URL=https://nkolinka.ru/donation-thanks/`, `YOOKASSA_RECURRING_ENABLED=false`, and a protected recurring runner token.
-9. YooKassa receipts are disabled for contract `НЭК.451387.01`; test payment creation without `receipt` returned a YooMoney checkout redirect.
-10. New donation attempts are written into custom WordPress database tables; YooKassa remains the payment source of truth for actual payment status.
-11. Recurring donation code is prepared behind `YOOKASSA_RECURRING_ENABLED=false`; production activation is blocked until YooKassa enables autopayments for the shop. One-time payments remain active and use all regular YooKassa methods enabled for the shop.
-12. Direct YooKassa recurring capability test returned `403 forbidden`, `This store can't make recurring payments. Contact the YooMoney manager to learn more`.
-13. T-Pay and SBP were added by YooKassa on 2026-07-12; `/v3/me` now returns `sbp` and `tinkoff_bank` in `payment_methods`.
-14. Before enabling recurring payments in production, deploy the self-service management flow at `/donation-subscription/`, publish or update the WordPress page with `[linka_donation_subscription]`, verify cancellation by protected link, and send screenshots to YooKassa.
-15. After cancellation, the subscription must be `canceled`, `payment_method_id` must be `NULL`, `next_charge_at` must be `NULL`, and no future runner charge should be possible for that subscription.
+4. Page `https://nkolinka.ru/donation-subscription/` is published as the protected-link self-service monthly donation management page.
+5. Privacy policy is updated for donation payment processing and YooKassa data transfer.
+6. Home page contains a `Пожертвовать` CTA.
+7. The donation page has active YooKassa redirect integration through runtime secrets.
+8. The donation page states that donations are not payment for goods, services, courses, consultations or software.
+9. Active Lockbox version `e6q1mtuhbkvj05fgs8ch` sets `YOOKASSA_SEND_RECEIPT=false`, `YOOKASSA_RETURN_URL=https://nkolinka.ru/donation-thanks/`, `YOOKASSA_RECURRING_ENABLED=false`, and a protected recurring runner token.
+10. YooKassa receipts are disabled for contract `НЭК.451387.01`; test payment creation without `receipt` returned a YooMoney checkout redirect.
+11. New donation attempts are written into custom WordPress database tables; YooKassa remains the payment source of truth for actual payment status.
+12. Recurring donation code is prepared behind `YOOKASSA_RECURRING_ENABLED=false`; production activation is blocked until YooKassa enables autopayments for the shop. One-time payments remain active and use all regular YooKassa methods enabled for the shop.
+13. Direct YooKassa recurring capability test returned `403 forbidden`, `This store can't make recurring payments. Contact the YooMoney manager to learn more`.
+14. T-Pay and SBP were added by YooKassa on 2026-07-12; `/v3/me` now returns `sbp` and `tinkoff_bank` in `payment_methods`.
+15. Self-service cancellation was deployed and verified on 2026-07-12: after cancellation the subscription becomes `canceled`, `payment_method_id=NULL`, `next_charge_at=NULL`, and no future runner charge is possible for that subscription.
+16. YooKassa approval screenshots were captured for the active management page and the cancelled confirmation page.
+17. Next step before enabling recurring payments: send YooKassa the self-service cancellation screenshots and wait for autopayment approval.
 
 ## 8. WordPress Users
 
