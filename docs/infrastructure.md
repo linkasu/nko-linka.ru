@@ -61,7 +61,10 @@ Serverless containers do not provide stable local persistent storage. WordPress 
 - The form collects donation amount, donor full name, donor email, and consent with the donation offer and personal data policy.
 - Payment is created server-side through YooKassa API and redirects the donor to YooKassa confirmation URL.
 - One-time donations explicitly set `save_payment_method=false`, so YooKassa can show all regular payment methods enabled for the shop without saving the payment method.
+- YooKassa `/v3/me` on 2026-07-12 reports enabled payment methods `yoo_money`, `bank_card`, `sberbank`, `sbp`, and `tinkoff_bank`; `fiscalization_enabled=false`.
 - Monthly donations are implemented behind `YOOKASSA_RECURRING_ENABLED`; they require YooKassa production autopayments, save the payment method on the first payment, process webhooks, and use a protected recurring runner endpoint.
+- Self-service monthly donation management is implemented at `/donation-subscription/` through a protected email link. The cancellation flow sets the subscription to `canceled`, clears `payment_method_id`, removes local saved payment method identifiers for the subscription payments, and stops future charges.
+- The monthly activation email contains the management link. The cancellation email confirms that the saved payment method was removed from the site system.
 - Direct YooKassa production test on 2026-07-12 returned `403 forbidden` for `save_payment_method=true`: the store cannot make recurring payments until YooKassa enables autopayments.
 - Required runtime secrets: `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`.
 - Optional runtime configuration: `YOOKASSA_RETURN_URL`, `YOOKASSA_SEND_RECEIPT`, `YOOKASSA_VAT_CODE`, `YOOKASSA_PAYMENT_SUBJECT`, `YOOKASSA_TAX_SYSTEM_CODE`, `YOOKASSA_RECURRING_ENABLED`, `LINKA_NKO_RECURRING_TOKEN`.

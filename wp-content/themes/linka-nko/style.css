@@ -2,7 +2,7 @@
 Theme Name: Linka NKO
 Author: ANO Linka
 Description: Official WordPress theme for nko-linka.ru.
-Version: 0.1.1
+Version: 0.1.2
 Text Domain: linka-nko
 */
 
@@ -268,6 +268,59 @@ a:focus { outline: 3px solid var(--linka-green); outline-offset: 3px; }
   margin: 0;
   color: var(--linka-muted);
   font-size: .95rem;
+}
+
+.donation-subscription {
+  margin: 32px 0;
+}
+
+.donation-subscription__card {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  background: var(--linka-card);
+  border: 1px solid var(--linka-border);
+  border-radius: 22px;
+}
+
+.donation-subscription__details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px 18px;
+  margin: 0;
+}
+
+.donation-subscription__details div {
+  padding: 14px 16px;
+  background: #f7fbfa;
+  border: 1px solid var(--linka-border);
+  border-radius: 16px;
+}
+
+.donation-subscription__details dt {
+  margin-bottom: 4px;
+  color: var(--linka-muted);
+  font-size: .92rem;
+}
+
+.donation-subscription__details dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.donation-subscription__form {
+  display: grid;
+  gap: 10px;
+}
+
+.donation-subscription__cancel {
+  justify-self: start;
+  background: #8c2f2f;
+}
+
+.donation-subscription__cancel:hover,
+.donation-subscription__cancel:focus {
+  background: #6f2222;
 }
 
 .site-footer .wrap {

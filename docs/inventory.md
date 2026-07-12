@@ -107,7 +107,10 @@ Service accounts:
 - The form creates YooKassa payments server-side without a `receipt` object and redirects the donor to the YooKassa confirmation URL.
 - New donation payments are written into custom WordPress tables `wp_linka_donation_payments` and, for monthly donations, `wp_linka_donation_subscriptions`; YooKassa remains the payment source of truth.
 - One-time donations explicitly set `save_payment_method=false` so all regular YooKassa methods enabled for the shop remain available without saving the payment method.
+- YooKassa added T-Pay and SBP on 2026-07-12. The contract email states SBP commission is `0.4%` with a cap of `1500 RUB`; T-Pay commission is `3%`; changes take effect the next day. Confirmation emails `31811` and `31812` state SBP and T-Pay were connected for shop `1403902`.
+- YooKassa `/v3/me` on 2026-07-12 returns `payment_methods=["yoo_money","bank_card","sberbank","sbp","tinkoff_bank"]` and `fiscalization_enabled=false`.
 - Monthly donation code is prepared behind `YOOKASSA_RECURRING_ENABLED`; it uses `save_payment_method=true` on the first payment, stores `payment_method.id` after YooKassa confirmation, and charges subsequent donations through a protected recurring runner endpoint.
+- Repository code now includes a self-service management page at `/donation-subscription/` for protected-link cancellation and local saved payment method removal. This must be deployed and verified before requesting YooKassa autopayment approval again.
 - YooKassa webhook endpoint is `https://nkolinka.ru/wp-admin/admin-post.php?action=linka_nko_yookassa_webhook`.
 - Recurring runner endpoint is `https://nkolinka.ru/wp-admin/admin-post.php?action=linka_nko_run_recurring_donations&token=...`; it requires `LINKA_NKO_RECURRING_TOKEN`.
 - Runtime YooKassa env vars are bound to active Serverless Container revision `bbaolpgu74iar2u89o7l` from Lockbox secret `nko-linka-yookassa`.
@@ -118,9 +121,10 @@ Service accounts:
 - Production deploy on 2026-07-12 created the donation tables and verified one-time test payment creation: local payment id `1`, YooKassa payment `31e5449b-000f-5001-9000-135353b43777`, status `pending`, unpaid, `frequency=one_time`, `payment_method_saved=0`.
 - Forced monthly POST on 2026-07-12 returned `503` before creating a payment or subscription because `YOOKASSA_RECURRING_ENABLED` is unset.
 - Attempted recurring-enabled monthly POST on 2026-07-12 returned `502` after YooKassa rejected `save_payment_method=true`; local test payment id `3` was marked `failed` and local subscription id `1` should be treated as failed test data.
-- Read-only DB check on 2026-07-12 found no donation/payment tables and no local WordPress payment record for the 500 RUB test payment.
+- Initial read-only DB check on 2026-07-12 found no local WordPress payment record for the earlier 500 RUB test payment because that payment happened before custom donation tables were deployed.
 - YooKassa API check on 2026-07-12 found a paid `500.00 RUB` payment with status `succeeded`.
 - YooKassa email on 2026-07-12 confirmed that automatic receipts were disabled for contract `НЭК.451387.01`; the support reply confirmed that no special payment scenario or description is required for voluntary donations.
+- YooKassa email `31813` on 2026-07-12 confirmed that payment methods were added and asked to reply when the site is ready to connect autopayments.
 - Donation page states that a donation is not payment for goods, services, courses, consultations, software or digital services.
 - Public verification on 2026-07-12: `/`, `/donate/`, and `/healthz.php` returned `200`; `/donate/` rendered the donation form and submit button.
 - Test POST verification on 2026-07-12: WordPress donation handler returned `303` to `https://yoomoney.ru/checkout/payments/v2/contract` without sending `receipt`; no payment was completed.

@@ -2,6 +2,7 @@
 set -eu
 
 if command -v php >/dev/null 2>&1; then
+  php -l wp-content/mu-plugins/linka-nko-donations.php
   php -l wp-content/mu-plugins/linka-nko-safety.php
   php -l wp-content/themes/linka-nko/functions.php
   php -l wp-content/themes/linka-nko/header.php

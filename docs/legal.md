@@ -39,6 +39,8 @@ The full legal address is present in public EGRUL documents. For v1:
 - Active payment form is enabled after YooKassa approval through runtime secrets; donations must remain voluntary and not be presented as payment for goods or services.
 - Do not issue receipts that describe voluntary donations as goods, works, services, courses, consultations, software or digital products.
 - Monthly voluntary donations require explicit donor consent for the amount, frequency, saved payment method, and cancellation process. They must be enabled only after YooKassa enables production autopayments for the shop.
+- Monthly donation cancellation must be self-service through a protected management link sent to the donor after the first successful payment. Cancellation by email can remain a fallback support channel, but it must not be the only way to unlink the saved payment method.
+- The site must not store bank card details. It may store YooKassa payment identifiers and saved payment method identifiers only while needed for recurring donations; the saved payment method identifier must be removed from the site database when the donor cancels the monthly donation.
 
 ## Nonprofit Transparency
 
