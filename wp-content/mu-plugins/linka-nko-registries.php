@@ -339,7 +339,6 @@ function linka_nko_store_registry(string $filename, string $content)
         return $parsed;
     }
 
-    $content = $parsed['normalized_content'];
     $hash = hash('sha256', $content);
     global $wpdb;
     $table = linka_nko_registry_table();
@@ -413,7 +412,7 @@ function linka_nko_store_registry(string $filename, string $content)
         $registry_id = (int) $wpdb->insert_id;
     }
 
-    $uploaded = linka_nko_registry_s3_request('PUT', $key, $content, 'text/csv; charset=utf-8');
+    $uploaded = linka_nko_registry_s3_request('PUT', $key, $content, 'text/csv');
     if (is_wp_error($uploaded)) {
         $wpdb->update($table, ['storage_status' => 'failed', 'updated_at' => gmdate('Y-m-d H:i:s')], ['id' => $registry_id, 'storage_status' => 'pending'], ['%s', '%s'], ['%d', '%s']);
         return $uploaded;
@@ -553,7 +552,6 @@ function linka_nko_parse_registry_csv(string $filename, string $content)
         'net_total' => (float) (linka_nko_registry_sum_columns_cents($rows, ['Сумма за вычетом комиссии и НДС', 'Сумма возврата за вычетом комиссии и НДС']) / 100),
         'commission_total' => (float) (linka_nko_registry_sum_columns_cents($rows, ['Сумма комиссии без НДС']) / 100),
         'commission_vat_total' => (float) (linka_nko_registry_sum_columns_cents($rows, ['НДС с комиссии']) / 100),
-        'normalized_content' => $content,
     ];
 }
 
