@@ -59,6 +59,7 @@ Also verify:
 - The direct Serverless Container URL returns `403` without IAM, while the public domain works through API Gateway.
 - Public requests to `/internal`, `/internal/run-recurring-donations`, and `/internal/*` return the Gateway's static `404`.
 - YC timer `nko-linka-recurring-donations` is active and invokes `/internal/run-recurring-donations` directly with the runtime service account every 15 minutes.
+- YC timer `nko-linka-donation-total-sync` is active and invokes `/internal/sync-donations` hourly at minute 7; the response must report `payments_synced=true`.
 - The recurring runner returns HTTP `200`; before a manual invocation, confirm there are no unexpected due or `charging` subscriptions.
 
 ## 6. Secrets
