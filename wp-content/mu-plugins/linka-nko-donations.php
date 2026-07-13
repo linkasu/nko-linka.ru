@@ -1423,7 +1423,7 @@ function linka_nko_frequency_label(string $frequency): string
 
 function linka_nko_format_amount(float $amount): string
 {
-    return number_format_i18n($amount, 0);
+    return number_format($amount, 0, ',', ' ');
 }
 
 function linka_nko_format_admin_datetime(string $mysql_datetime): string
