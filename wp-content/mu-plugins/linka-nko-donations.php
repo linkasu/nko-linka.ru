@@ -11,6 +11,7 @@ const LINKA_NKO_DONATION_FREQUENCY_ONE_TIME = 'one_time';
 const LINKA_NKO_DONATION_FREQUENCY_MONTHLY = 'monthly';
 const LINKA_NKO_DONATION_SUBSCRIPTION_PATH = 'donation-subscription';
 const LINKA_NKO_RECURRING_INTERNAL_PATH = 'internal/run-recurring-donations';
+const LINKA_NKO_DONATION_SYNC_INTERNAL_PATH = 'internal/sync-donations';
 
 add_action('init', 'linka_nko_ensure_donation_schema', 1);
 add_shortcode('linka_donation_form', 'linka_nko_render_donation_form');
@@ -27,6 +28,7 @@ add_action('admin_post_linka_nko_yookassa_webhook', 'linka_nko_yookassa_webhook'
 add_action('admin_post_nopriv_linka_nko_run_recurring_donations', 'linka_nko_run_recurring_donations');
 add_action('admin_post_linka_nko_run_recurring_donations', 'linka_nko_run_recurring_donations');
 add_action('template_redirect', 'linka_nko_run_internal_recurring_path', 1);
+add_action('template_redirect', 'linka_nko_run_internal_donation_sync_path', 1);
 add_action('template_redirect', 'linka_nko_render_subscription_path');
 
 function linka_nko_render_donation_form(): string
@@ -413,6 +415,91 @@ function linka_nko_run_internal_recurring_path(): void
     }
 
     wp_send_json(linka_nko_process_due_subscriptions(), 200);
+}
+
+function linka_nko_run_internal_donation_sync_path(): void
+{
+    $path = (string) wp_parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    if ($path !== '/' . LINKA_NKO_DONATION_SYNC_INTERNAL_PATH) {
+        return;
+    }
+
+    if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
+        wp_send_json(['ok' => false, 'error' => 'method not allowed'], 405);
+    }
+
+    $sync = linka_nko_sync_successful_payments_from_yookassa();
+    if (is_wp_error($sync)) {
+        wp_send_json(['ok' => false, 'payments_synced' => false], 502);
+    }
+
+    wp_send_json(array_merge(['ok' => true], $sync), 200);
+}
+
+function linka_nko_sync_successful_payments_from_yookassa()
+{
+    $total = 0.0;
+    $payment_count = 0;
+    $cursor = '';
+
+    for ($page = 0; $page < 20; $page++) {
+        $path = 'payments?status=succeeded&limit=100';
+        if ($cursor !== '') {
+            $path .= '&cursor=' . rawurlencode($cursor);
+        }
+
+        $response = linka_nko_yookassa_request('GET', $path, null, 20);
+        if (is_wp_error($response)) {
+            error_log('YooKassa payment total sync failed: ' . $response->get_error_message());
+            return $response;
+        }
+
+        $status_code = (int) wp_remote_retrieve_response_code($response);
+        $body = json_decode((string) wp_remote_retrieve_body($response), true);
+        if ($status_code !== 200 || !is_array($body) || !is_array($body['items'] ?? null)) {
+            linka_nko_log_bad_yookassa_response($status_code, $body);
+            return new WP_Error('linka_nko_yookassa_total_sync_failed', 'YooKassa payment list is unavailable.');
+        }
+
+        foreach ($body['items'] as $payment) {
+            if (!is_array($payment) || (string) ($payment['status'] ?? '') !== 'succeeded') {
+                continue;
+            }
+
+            $metadata = is_array($payment['metadata'] ?? null) ? $payment['metadata'] : [];
+            if (!empty($payment['test']) || (string) ($metadata['purpose'] ?? '') !== 'statutory_voluntary_donation') {
+                continue;
+            }
+
+            $currency = (string) ($payment['amount']['currency'] ?? '');
+            $amount = (float) ($payment['amount']['value'] ?? 0);
+            $refunded = (float) ($payment['refunded_amount']['value'] ?? 0);
+            if ($currency !== 'RUB' || $amount <= 0) {
+                continue;
+            }
+
+            $total += max(0, $amount - $refunded);
+            $payment_count++;
+        }
+
+        $cursor = isset($body['next_cursor']) && is_scalar($body['next_cursor']) ? (string) $body['next_cursor'] : '';
+        if ($cursor === '') {
+            break;
+        }
+    }
+
+    if ($cursor !== '') {
+        return new WP_Error('linka_nko_yookassa_total_sync_incomplete', 'YooKassa payment list pagination limit was reached.');
+    }
+
+    update_option('linka_nko_donation_total_api', number_format($total, 2, '.', ''), false);
+    update_option('linka_nko_donation_total_synced_at', linka_nko_utc_now(), false);
+
+    return [
+        'payments_synced' => true,
+        'successful_payments' => $payment_count,
+        'donation_total' => number_format($total, 2, '.', ''),
+    ];
 }
 
 function linka_nko_process_due_subscriptions(): array
@@ -1039,6 +1126,11 @@ function linka_nko_get_payment_by_id(int $payment_id): ?object
 
 function linka_nko_get_successful_donation_total(): float
 {
+    $api_total = get_option('linka_nko_donation_total_api', false);
+    if ($api_total !== false && is_numeric($api_total)) {
+        return (float) $api_total;
+    }
+
     global $wpdb;
     $tables = linka_nko_donation_tables();
     $total = $wpdb->get_var("SELECT COALESCE(SUM(amount_value), 0) FROM {$tables['payments']} WHERE status = 'succeeded'");
