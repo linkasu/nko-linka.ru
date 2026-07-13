@@ -6,14 +6,17 @@
 const LINKA_NKO_DONATION_AMOUNTS = [500, 1000, 3000, 5000];
 const LINKA_NKO_DONATION_MIN_AMOUNT = 100;
 const LINKA_NKO_DONATION_MAX_AMOUNT = 300000;
-const LINKA_NKO_DONATION_SCHEMA_VERSION = '20260712-2';
+const LINKA_NKO_DONATION_SCHEMA_VERSION = '20260713-2';
 const LINKA_NKO_DONATION_FREQUENCY_ONE_TIME = 'one_time';
 const LINKA_NKO_DONATION_FREQUENCY_MONTHLY = 'monthly';
 const LINKA_NKO_DONATION_SUBSCRIPTION_PATH = 'donation-subscription';
+const LINKA_NKO_RECURRING_INTERNAL_PATH = 'internal/run-recurring-donations';
 
 add_action('init', 'linka_nko_ensure_donation_schema', 1);
 add_shortcode('linka_donation_form', 'linka_nko_render_donation_form');
 add_shortcode('linka_donation_subscription', 'linka_nko_render_subscription_page');
+add_shortcode('linka_donation_total', 'linka_nko_render_donation_total');
+add_action('admin_menu', 'linka_nko_register_donations_admin_page');
 
 add_action('admin_post_nopriv_linka_nko_create_donation', 'linka_nko_create_donation');
 add_action('admin_post_linka_nko_create_donation', 'linka_nko_create_donation');
@@ -23,6 +26,7 @@ add_action('admin_post_nopriv_linka_nko_yookassa_webhook', 'linka_nko_yookassa_w
 add_action('admin_post_linka_nko_yookassa_webhook', 'linka_nko_yookassa_webhook');
 add_action('admin_post_nopriv_linka_nko_run_recurring_donations', 'linka_nko_run_recurring_donations');
 add_action('admin_post_linka_nko_run_recurring_donations', 'linka_nko_run_recurring_donations');
+add_action('template_redirect', 'linka_nko_run_internal_recurring_path', 1);
 add_action('template_redirect', 'linka_nko_render_subscription_path');
 
 function linka_nko_render_donation_form(): string
@@ -38,6 +42,8 @@ function linka_nko_render_donation_form(): string
     ?>
     <section class="donation-form" aria-labelledby="donation-form-title">
       <h2 id="donation-form-title">Сделать пожертвование</h2>
+
+      <?php echo linka_nko_render_donation_total(); ?>
 
       <?php if ($status === 'started') : ?>
         <p class="notice notice-success">Платеж создан. Если страница оплаты не открылась, попробуйте отправить форму еще раз.</p>
@@ -119,6 +125,12 @@ function linka_nko_render_donation_form(): string
     </section>
     <?php
     return (string) ob_get_clean();
+}
+
+function linka_nko_render_donation_total(): string
+{
+    $total = linka_nko_get_successful_donation_total();
+    return '<div class="donation-total" aria-label="Общая сумма успешных пожертвований"><span>Уже пожертвовали</span><strong>' . esc_html(linka_nko_format_amount($total)) . ' ₽</strong></div>';
 }
 
 function linka_nko_render_subscription_path(): void
@@ -211,7 +223,7 @@ function linka_nko_render_subscription_details(object $subscription, string $tok
         <?php endif; ?>
       </dl>
 
-      <?php if ($status === 'active' && (string) $subscription->payment_method_id !== '') : ?>
+      <?php if (in_array($status, ['active', 'charging'], true) && (string) $subscription->payment_method_id !== '') : ?>
         <p>Вы можете в любой момент отключить ежемесячное пожертвование. После отключения сохраненный способ оплаты будет удален из нашей системы, новые списания выполняться не будут.</p>
         <form class="donation-subscription__form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
           <input type="hidden" name="action" value="linka_nko_cancel_subscription">
@@ -270,8 +282,14 @@ function linka_nko_create_donation(): void
         wp_die('Не удалось подготовить платеж. Попробуйте позже.', '', ['response' => 500]);
     }
 
+    $local_payment = linka_nko_get_payment_by_id($payment_id);
+    if ($local_payment === null || (string) $local_payment->idempotence_key === '') {
+        linka_nko_mark_payment_failed($payment_id, 'missing_idempotence_key');
+        wp_die('Не удалось подготовить платеж. Попробуйте позже.', '', ['response' => 500]);
+    }
+
     $payload = linka_nko_build_yookassa_payload($amount, $donor_name, $donor_email, $frequency, $payment_id, $subscription_id);
-    $response = linka_nko_yookassa_request('POST', 'payments', $payload, 20);
+    $response = linka_nko_yookassa_request('POST', 'payments', $payload, 20, (string) $local_payment->idempotence_key);
 
     if (is_wp_error($response)) {
         error_log('YooKassa donation error: ' . $response->get_error_message());
@@ -376,6 +394,39 @@ function linka_nko_run_recurring_donations(): void
         wp_send_json(['ok' => true, 'enabled' => false, 'processed' => 0]);
     }
 
+    wp_send_json(linka_nko_process_due_subscriptions());
+}
+
+function linka_nko_run_internal_recurring_path(): void
+{
+    $path = (string) wp_parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    if ($path !== '/' . LINKA_NKO_RECURRING_INTERNAL_PATH) {
+        return;
+    }
+
+    if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
+        wp_send_json(['ok' => false, 'error' => 'method not allowed'], 405);
+    }
+
+    if (!linka_nko_recurring_enabled()) {
+        wp_send_json(['ok' => true, 'enabled' => false, 'processed' => 0]);
+    }
+
+    wp_send_json(linka_nko_process_due_subscriptions());
+}
+
+function linka_nko_process_due_subscriptions(): array
+{
+    $recovered = 0;
+    $recovery_failed = 0;
+    foreach (linka_nko_get_charging_subscriptions(20) as $subscription) {
+        if (linka_nko_recover_charging_subscription($subscription)) {
+            $recovered++;
+        } else {
+            $recovery_failed++;
+        }
+    }
+
     $processed = 0;
     $failed = 0;
     foreach (linka_nko_get_due_subscriptions(20) as $subscription) {
@@ -387,7 +438,14 @@ function linka_nko_run_recurring_donations(): void
         }
     }
 
-    wp_send_json(['ok' => true, 'enabled' => true, 'processed' => $processed, 'failed' => $failed]);
+    return [
+        'ok' => true,
+        'enabled' => true,
+        'recovered' => $recovered,
+        'recovery_failed' => $recovery_failed,
+        'processed' => $processed,
+        'failed' => $failed,
+    ];
 }
 
 function linka_nko_charge_subscription(object $subscription): bool
@@ -405,16 +463,35 @@ function linka_nko_charge_subscription(object $subscription): bool
         return false;
     }
 
-    $payment_id = linka_nko_insert_payment($amount, (string) $subscription->donor_name, (string) $subscription->donor_email, LINKA_NKO_DONATION_FREQUENCY_MONTHLY, (int) $subscription->id);
-    if ($payment_id === null) {
+    $payment = linka_nko_prepare_subscription_charge($subscription);
+    if ($payment === null) {
         return false;
     }
 
-    $payload = linka_nko_build_recurring_charge_payload($amount, $payment_method_id, $payment_id, (int) $subscription->id);
-    $response = linka_nko_yookassa_request('POST', 'payments', $payload, 20);
+    return linka_nko_submit_recurring_payment($subscription, $payment);
+}
+
+function linka_nko_recover_charging_subscription(object $subscription): bool
+{
+    $current_subscription = linka_nko_get_subscription_by_id((int) $subscription->id);
+    if ($current_subscription === null || (string) $current_subscription->status !== 'charging') {
+        return false;
+    }
+
+    $payment = linka_nko_get_payment_by_id((int) $current_subscription->last_payment_id);
+    if ($payment === null || (string) $payment->idempotence_key === '' || (string) $current_subscription->payment_method_id === '') {
+        linka_nko_update_subscription_status((int) $current_subscription->id, 'failed');
+        return false;
+    }
+
+    $yookassa_payment_id = (string) $payment->yookassa_payment_id;
+    if ($yookassa_payment_id === '') {
+        return linka_nko_submit_recurring_payment($current_subscription, $payment);
+    }
+
+    $response = linka_nko_yookassa_request('GET', 'payments/' . rawurlencode($yookassa_payment_id), null, 10);
     if (is_wp_error($response)) {
-        error_log('YooKassa recurring donation error: ' . $response->get_error_message());
-        linka_nko_mark_payment_failed($payment_id, 'request_error');
+        error_log('YooKassa recurring recovery error: ' . $response->get_error_message());
         return false;
     }
 
@@ -422,7 +499,48 @@ function linka_nko_charge_subscription(object $subscription): bool
     $body = json_decode((string) wp_remote_retrieve_body($response), true);
     if ($status_code < 200 || $status_code >= 300 || !is_array($body)) {
         linka_nko_log_bad_yookassa_response($status_code, $body);
-        linka_nko_mark_payment_failed($payment_id, 'bad_response');
+        if ($status_code >= 400 && $status_code < 500 && $status_code !== 429) {
+            linka_nko_mark_payment_failed((int) $payment->id, 'recovery_rejected');
+        }
+        return false;
+    }
+
+    linka_nko_sync_payment_from_yookassa($body, (int) $payment->id);
+    return true;
+}
+
+function linka_nko_submit_recurring_payment(object $subscription, object $payment): bool
+{
+    $amount = (int) $subscription->amount_value;
+    $payment_method_id = (string) $subscription->payment_method_id;
+    $payment_id = (int) $payment->id;
+    $idempotence_key = (string) $payment->idempotence_key;
+    if ($amount <= 0 || $payment_method_id === '' || $payment_id <= 0 || $idempotence_key === '') {
+        linka_nko_mark_payment_failed($payment_id, 'invalid_recurring_attempt');
+        return false;
+    }
+
+    $attempt_started_at = strtotime((string) $payment->created_at . ' UTC');
+    if ($attempt_started_at === false || time() - $attempt_started_at >= 23 * HOUR_IN_SECONDS) {
+        linka_nko_mark_payment_failed($payment_id, 'idempotence_window_expired');
+        error_log('Recurring donation requires manual review for payment ' . $payment_id);
+        return false;
+    }
+
+    $payload = linka_nko_build_recurring_charge_payload($amount, $payment_method_id, $payment_id, (int) $subscription->id);
+    $response = linka_nko_yookassa_request('POST', 'payments', $payload, 20, $idempotence_key);
+    if (is_wp_error($response)) {
+        error_log('YooKassa recurring donation error: ' . $response->get_error_message());
+        return false;
+    }
+
+    $status_code = (int) wp_remote_retrieve_response_code($response);
+    $body = json_decode((string) wp_remote_retrieve_body($response), true);
+    if ($status_code < 200 || $status_code >= 300 || !is_array($body)) {
+        linka_nko_log_bad_yookassa_response($status_code, $body);
+        if ($status_code >= 400 && $status_code < 500 && $status_code !== 429) {
+            linka_nko_mark_payment_failed($payment_id, 'recurring_rejected');
+        }
         return false;
     }
 
@@ -531,7 +649,7 @@ function linka_nko_build_receipt(string $formatted_amount, string $donor_name, s
     return $receipt;
 }
 
-function linka_nko_yookassa_request(string $method, string $path, ?array $payload = null, int $timeout = 20)
+function linka_nko_yookassa_request(string $method, string $path, ?array $payload = null, int $timeout = 20, ?string $idempotence_key = null)
 {
     $shop_id = trim((string) getenv('YOOKASSA_SHOP_ID'));
     $secret_key = trim((string) getenv('YOOKASSA_SECRET_KEY'));
@@ -545,7 +663,7 @@ function linka_nko_yookassa_request(string $method, string $path, ?array $payloa
         'headers' => [
             'Authorization' => 'Basic ' . base64_encode($shop_id . ':' . $secret_key),
             'Content-Type' => 'application/json',
-            'Idempotence-Key' => wp_generate_uuid4(),
+            'Idempotence-Key' => $idempotence_key ?: wp_generate_uuid4(),
         ],
     ];
 
@@ -624,6 +742,7 @@ function linka_nko_ensure_donation_schema(): void
         id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
         subscription_id bigint(20) unsigned NULL,
         yookassa_payment_id varchar(80) NULL,
+        idempotence_key char(36) NULL,
         amount_value decimal(12,2) NOT NULL,
         currency char(3) NOT NULL DEFAULT 'RUB',
         donor_name varchar(160) NOT NULL,
@@ -633,11 +752,13 @@ function linka_nko_ensure_donation_schema(): void
         payment_method_id varchar(128) NULL,
         payment_method_saved tinyint(1) NOT NULL DEFAULT 0,
         cancellation_reason varchar(100) NULL,
+        thank_you_email_sent_at datetime NULL,
         created_at datetime NOT NULL,
         updated_at datetime NOT NULL,
         paid_at datetime NULL,
         PRIMARY KEY  (id),
         UNIQUE KEY yookassa_payment_id (yookassa_payment_id),
+        UNIQUE KEY idempotence_key (idempotence_key),
         KEY subscription_id (subscription_id),
         KEY status (status),
         KEY donor_email (donor_email)
@@ -753,6 +874,7 @@ function linka_nko_insert_payment(int $amount, string $donor_name, string $donor
 
     $inserted = $wpdb->insert($tables['payments'], [
         'subscription_id' => $subscription_id,
+        'idempotence_key' => wp_generate_uuid4(),
         'amount_value' => number_format($amount, 2, '.', ''),
         'currency' => 'RUB',
         'donor_name' => $donor_name,
@@ -761,7 +883,7 @@ function linka_nko_insert_payment(int $amount, string $donor_name, string $donor
         'status' => 'pending',
         'created_at' => $now,
         'updated_at' => $now,
-    ], ['%d', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s']);
+    ], ['%d', '%s', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s']);
 
     return $inserted ? (int) $wpdb->insert_id : null;
 }
@@ -835,6 +957,10 @@ function linka_nko_sync_payment_from_yookassa(array $payment, ?int $fallback_loc
     if ($subscription_id > 0) {
         linka_nko_sync_subscription_from_payment($subscription_id, $status, $payment_method_id, (bool) $payment_method_saved, $local_payment_id);
     }
+
+    if ($status === 'succeeded' && $local_payment_id > 0) {
+        linka_nko_maybe_send_one_time_thank_you_email($local_payment_id);
+    }
 }
 
 function linka_nko_sync_subscription_from_payment(int $subscription_id, string $payment_status, string $payment_method_id, bool $payment_method_saved, int $local_payment_id): void
@@ -861,14 +987,15 @@ function linka_nko_sync_subscription_from_payment(int $subscription_id, string $
         return;
     }
 
-    if ($payment_status === 'succeeded' && $subscription !== null && (string) $subscription->status === 'active' && (string) $subscription->payment_method_id !== '') {
+    if ($payment_status === 'succeeded' && $subscription !== null && in_array((string) $subscription->status, ['active', 'charging'], true) && (string) $subscription->payment_method_id !== '') {
         $wpdb->update($tables['subscriptions'], [
+            'status' => 'active',
             'last_charge_at' => $now,
             'next_charge_at' => linka_nko_next_monthly_charge_at($now),
             'last_payment_id' => $local_payment_id > 0 ? $local_payment_id : null,
             'failed_attempts' => 0,
             'updated_at' => $now,
-        ], ['id' => $subscription_id], ['%s', '%s', '%d', '%d', '%s'], ['%d']);
+        ], ['id' => $subscription_id], ['%s', '%s', '%s', '%d', '%d', '%s'], ['%d']);
         return;
     }
 
@@ -899,6 +1026,166 @@ function linka_nko_get_subscription_by_id(int $subscription_id): ?object
     $subscription = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tables['subscriptions']} WHERE id = %d", $subscription_id));
 
     return is_object($subscription) ? $subscription : null;
+}
+
+function linka_nko_get_payment_by_id(int $payment_id): ?object
+{
+    global $wpdb;
+    $tables = linka_nko_donation_tables();
+    $payment = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tables['payments']} WHERE id = %d", $payment_id));
+
+    return is_object($payment) ? $payment : null;
+}
+
+function linka_nko_get_successful_donation_total(): float
+{
+    global $wpdb;
+    $tables = linka_nko_donation_tables();
+    $total = $wpdb->get_var("SELECT COALESCE(SUM(amount_value), 0) FROM {$tables['payments']} WHERE status = 'succeeded'");
+
+    return (float) $total;
+}
+
+function linka_nko_register_donations_admin_page(): void
+{
+    add_menu_page(
+        'Пожертвования',
+        'Пожертвования',
+        'manage_options',
+        'linka-nko-donations',
+        'linka_nko_render_donations_admin_page',
+        'dashicons-heart',
+        58
+    );
+}
+
+function linka_nko_render_donations_admin_page(): void
+{
+    if (!current_user_can('manage_options')) {
+        wp_die('Недостаточно прав.', '', ['response' => 403]);
+    }
+
+    global $wpdb;
+    $tables = linka_nko_donation_tables();
+    $total = linka_nko_get_successful_donation_total();
+    $successful_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$tables['payments']} WHERE status = 'succeeded'");
+    $active_subscriptions = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$tables['subscriptions']} WHERE status = 'active'");
+    $payments = $wpdb->get_results("SELECT * FROM {$tables['payments']} ORDER BY created_at DESC LIMIT 100");
+    $subscriptions = $wpdb->get_results("SELECT * FROM {$tables['subscriptions']} ORDER BY created_at DESC LIMIT 50");
+    ?>
+    <div class="wrap linka-donations-admin">
+      <h1>Пожертвования</h1>
+      <p>YooKassa остается источником истины по платежам. Эта страница показывает локальные записи сайта для сверки, писем и регулярных пожертвований.</p>
+
+      <div class="linka-donations-admin__summary">
+        <div><strong><?php echo esc_html(linka_nko_format_amount($total)); ?> ₽</strong><span>успешных пожертвований</span></div>
+        <div><strong><?php echo esc_html((string) $successful_count); ?></strong><span>успешных платежей</span></div>
+        <div><strong><?php echo esc_html((string) $active_subscriptions); ?></strong><span>активных ежемесячных</span></div>
+      </div>
+
+      <h2>Последние платежи</h2>
+      <table class="widefat striped">
+        <thead><tr><th>ID</th><th>Дата</th><th>Сумма</th><th>Периодичность</th><th>Статус</th><th>Жертвователь</th><th>Email</th><th>YooKassa</th><th>Письмо</th></tr></thead>
+        <tbody>
+          <?php if ($payments === []) : ?>
+            <tr><td colspan="9">Платежей пока нет.</td></tr>
+          <?php else : ?>
+            <?php foreach ($payments as $payment) : ?>
+              <tr>
+                <td><?php echo esc_html((string) $payment->id); ?></td>
+                <td><?php echo esc_html(linka_nko_format_admin_datetime((string) $payment->created_at)); ?></td>
+                <td><?php echo esc_html(linka_nko_format_amount((float) $payment->amount_value)); ?> ₽</td>
+                <td><?php echo esc_html(linka_nko_frequency_label((string) $payment->frequency)); ?></td>
+                <td><?php echo esc_html(linka_nko_payment_status_label((string) $payment->status)); ?></td>
+                <td><?php echo esc_html((string) $payment->donor_name); ?></td>
+                <td><a href="mailto:<?php echo esc_attr((string) $payment->donor_email); ?>"><?php echo esc_html((string) $payment->donor_email); ?></a></td>
+                <td><?php echo esc_html((string) $payment->yookassa_payment_id); ?></td>
+                <td><?php echo esc_html((string) $payment->thank_you_email_sent_at !== '' ? linka_nko_format_admin_datetime((string) $payment->thank_you_email_sent_at) : ''); ?></td>
+              </tr>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </tbody>
+      </table>
+
+      <h2>Ежемесячные пожертвования</h2>
+      <table class="widefat striped">
+        <thead><tr><th>ID</th><th>Создано</th><th>Сумма</th><th>Статус</th><th>Следующее списание</th><th>Жертвователь</th><th>Email</th><th>Payment method</th></tr></thead>
+        <tbody>
+          <?php if ($subscriptions === []) : ?>
+            <tr><td colspan="8">Подписок пока нет.</td></tr>
+          <?php else : ?>
+            <?php foreach ($subscriptions as $subscription) : ?>
+              <tr>
+                <td><?php echo esc_html((string) $subscription->id); ?></td>
+                <td><?php echo esc_html(linka_nko_format_admin_datetime((string) $subscription->created_at)); ?></td>
+                <td><?php echo esc_html(linka_nko_format_amount((float) $subscription->amount_value)); ?> ₽</td>
+                <td><?php echo esc_html(linka_nko_subscription_status_label((string) $subscription->status)); ?></td>
+                <td><?php echo esc_html(linka_nko_format_admin_datetime((string) $subscription->next_charge_at)); ?></td>
+                <td><?php echo esc_html((string) $subscription->donor_name); ?></td>
+                <td><a href="mailto:<?php echo esc_attr((string) $subscription->donor_email); ?>"><?php echo esc_html((string) $subscription->donor_email); ?></a></td>
+                <td><?php echo esc_html((string) $subscription->payment_method_id); ?></td>
+              </tr>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+    <style>
+      .linka-donations-admin__summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 18px 0 28px; }
+      .linka-donations-admin__summary div { padding: 16px; background: #fff; border: 1px solid #c3c4c7; border-radius: 8px; }
+      .linka-donations-admin__summary strong { display: block; font-size: 24px; line-height: 1.2; }
+      .linka-donations-admin__summary span { color: #646970; }
+      .linka-donations-admin table { margin-bottom: 28px; }
+    </style>
+    <?php
+}
+
+function linka_nko_maybe_send_one_time_thank_you_email(int $payment_id): void
+{
+    global $wpdb;
+    $tables = linka_nko_donation_tables();
+    $payment = linka_nko_get_payment_by_id($payment_id);
+    if ($payment === null || (string) $payment->frequency !== LINKA_NKO_DONATION_FREQUENCY_ONE_TIME) {
+        return;
+    }
+
+    if ((string) $payment->status !== 'succeeded' || (string) $payment->thank_you_email_sent_at !== '') {
+        return;
+    }
+
+    $now = linka_nko_utc_now();
+    $claimed = $wpdb->query($wpdb->prepare(
+        "UPDATE {$tables['payments']} SET thank_you_email_sent_at = %s, updated_at = %s WHERE id = %d AND thank_you_email_sent_at IS NULL",
+        $now,
+        $now,
+        $payment_id
+    ));
+    if ($claimed !== 1) {
+        return;
+    }
+
+    if (!linka_nko_send_one_time_thank_you_email($payment)) {
+        $wpdb->update($tables['payments'], [
+            'thank_you_email_sent_at' => null,
+            'updated_at' => linka_nko_utc_now(),
+        ], ['id' => $payment_id], ['%s', '%s'], ['%d']);
+        error_log('Donation thank-you email failed for payment ' . $payment_id);
+    }
+}
+
+function linka_nko_send_one_time_thank_you_email(object $payment): bool
+{
+    $amount = linka_nko_format_amount((float) $payment->amount_value);
+    $body = "Здравствуйте!\n\n"
+        . "Спасибо за добровольное пожертвование в пользу АНО «Линка».\n\n"
+        . "Сумма пожертвования: {$amount} ₽\n"
+        . "Назначение: поддержка уставной деятельности АНО «Линка»\n\n"
+        . "Ваш вклад помогает развивать доступную среду и поддерживать программы альтернативной и дополнительной коммуникации для людей с ОВЗ.\n\n"
+        . "Пожертвование не является оплатой товаров, работ или услуг.\n\n"
+        . "Если у вас есть вопросы или пожертвование было отправлено ошибочно, напишите нам: feedback@linka.su\n\n"
+        . "Спасибо!\nАНО «Линка»";
+
+    return wp_mail((string) $payment->donor_email, 'Спасибо за пожертвование АНО «Линка»', $body);
 }
 
 function linka_nko_maybe_send_subscription_activation_email(int $subscription_id): void
@@ -1008,13 +1295,57 @@ function linka_nko_subscription_status_label(string $status): string
     if ($status === 'pending') {
         return 'Ожидает подтверждения';
     }
+    if ($status === 'charging') {
+        return 'Выполняется списание';
+    }
 
     return 'Не активно';
+}
+
+function linka_nko_payment_status_label(string $status): string
+{
+    if ($status === 'succeeded') {
+        return 'Успешен';
+    }
+    if ($status === 'pending') {
+        return 'Ожидает оплаты';
+    }
+    if ($status === 'canceled') {
+        return 'Отменен';
+    }
+    if ($status === 'failed') {
+        return 'Ошибка';
+    }
+
+    return $status;
+}
+
+function linka_nko_frequency_label(string $frequency): string
+{
+    if ($frequency === LINKA_NKO_DONATION_FREQUENCY_MONTHLY) {
+        return 'Ежемесячно';
+    }
+
+    return 'Разово';
 }
 
 function linka_nko_format_amount(float $amount): string
 {
     return number_format_i18n($amount, 0);
+}
+
+function linka_nko_format_admin_datetime(string $mysql_datetime): string
+{
+    if ($mysql_datetime === '') {
+        return '';
+    }
+
+    $timestamp = strtotime($mysql_datetime . ' UTC');
+    if ($timestamp === false) {
+        return '';
+    }
+
+    return wp_date('d.m.Y H:i', $timestamp);
 }
 
 function linka_nko_format_date(string $mysql_datetime): string
@@ -1053,6 +1384,66 @@ function linka_nko_get_due_subscriptions(int $limit): array
         linka_nko_utc_now(),
         $limit
     ));
+}
+
+function linka_nko_get_charging_subscriptions(int $limit): array
+{
+    global $wpdb;
+    $tables = linka_nko_donation_tables();
+
+    return $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$tables['subscriptions']} WHERE status = 'charging' ORDER BY updated_at ASC LIMIT %d",
+        $limit
+    ));
+}
+
+function linka_nko_prepare_subscription_charge(object $subscription): ?object
+{
+    global $wpdb;
+    $tables = linka_nko_donation_tables();
+    $subscription_id = (int) $subscription->id;
+    $next_charge_at = (string) $subscription->next_charge_at;
+    if ($subscription_id <= 0 || $next_charge_at === '') {
+        return null;
+    }
+
+    $wpdb->query('START TRANSACTION');
+    $claimed = $wpdb->query($wpdb->prepare(
+        "UPDATE {$tables['subscriptions']} SET status = 'charging', updated_at = %s WHERE id = %d AND status = 'active' AND next_charge_at = %s AND next_charge_at <= %s",
+        linka_nko_utc_now(),
+        $subscription_id,
+        $next_charge_at,
+        linka_nko_utc_now()
+    ));
+    if ($claimed !== 1) {
+        $wpdb->query('ROLLBACK');
+        return null;
+    }
+
+    $payment_id = linka_nko_insert_payment(
+        (int) $subscription->amount_value,
+        (string) $subscription->donor_name,
+        (string) $subscription->donor_email,
+        LINKA_NKO_DONATION_FREQUENCY_MONTHLY,
+        $subscription_id
+    );
+    if ($payment_id === null) {
+        $wpdb->query('ROLLBACK');
+        return null;
+    }
+
+    $linked = $wpdb->update($tables['subscriptions'], [
+        'last_payment_id' => $payment_id,
+        'updated_at' => linka_nko_utc_now(),
+    ], ['id' => $subscription_id, 'status' => 'charging'], ['%d', '%s'], ['%d', '%s']);
+    if ($linked !== 1) {
+        $wpdb->query('ROLLBACK');
+        return null;
+    }
+
+    $wpdb->query('COMMIT');
+
+    return linka_nko_get_payment_by_id($payment_id);
 }
 
 function linka_nko_update_subscription_status(int $subscription_id, string $status): void

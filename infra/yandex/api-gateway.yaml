@@ -3,6 +3,39 @@ info:
   title: nko-linka-wordpress
   version: 1.0.0
 paths:
+  /internal:
+    x-yc-apigateway-any-method:
+      x-yc-apigateway-integration:
+        type: dummy
+        http_code: 404
+        http_headers:
+          Content-Type: application/json
+        content:
+          application/json: '{"error":"not found"}'
+  /internal/run-recurring-donations:
+    x-yc-apigateway-any-method:
+      x-yc-apigateway-integration:
+        type: dummy
+        http_code: 404
+        http_headers:
+          Content-Type: application/json
+        content:
+          application/json: '{"error":"not found"}'
+  /internal/{proxy+}:
+    parameters:
+      - name: proxy
+        in: path
+        required: true
+        schema:
+          type: string
+    x-yc-apigateway-any-method:
+      x-yc-apigateway-integration:
+        type: dummy
+        http_code: 404
+        http_headers:
+          Content-Type: application/json
+        content:
+          application/json: '{"error":"not found"}'
   /:
     x-yc-apigateway-any-method:
       x-yc-apigateway-integration:
