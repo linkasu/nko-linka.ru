@@ -31,6 +31,8 @@ The full legal address is present in public EGRUL documents. For v1:
 - Personal data policy.
 - Donation offer, if the site shows voluntary donations.
 
+The organization website publishes the charter and the tax-register extract containing entity details. EGRUL files that include the chairperson's personal tax identifier are not published; current EGRUL information is linked through the official FNS service instead. Annual statutory reports are submitted to and published by the authorized government resource; the website reports section may duplicate public reports after the first reporting period.
+
 ## Donations
 
 - Only voluntary donations for statutory nonprofit activity are allowed on the site.

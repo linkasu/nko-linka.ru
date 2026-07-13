@@ -56,6 +56,10 @@ Also verify:
 - If donation pages are enabled: no goods, services, prices, tariffs or payment secrets in repository; active YooKassa form is allowed only after approval and only through Lockbox/runtime env bindings.
 - Documents page links to PDFs.
 - Mobile rendering.
+- The direct Serverless Container URL returns `403` without IAM, while the public domain works through API Gateway.
+- Public requests to `/internal`, `/internal/run-recurring-donations`, and `/internal/*` return the Gateway's static `404`.
+- YC timer `nko-linka-recurring-donations` is active and invokes `/internal/run-recurring-donations` directly with the runtime service account every 15 minutes.
+- The recurring runner returns HTTP `200`; before a manual invocation, confirm there are no unexpected due or `charging` subscriptions.
 
 ## 6. Secrets
 
