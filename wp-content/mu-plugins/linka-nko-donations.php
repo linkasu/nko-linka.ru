@@ -391,10 +391,10 @@ function linka_nko_run_recurring_donations(): void
     }
 
     if (!linka_nko_recurring_enabled()) {
-        wp_send_json(['ok' => true, 'enabled' => false, 'processed' => 0]);
+        wp_send_json(['ok' => true, 'enabled' => false, 'processed' => 0], 200);
     }
 
-    wp_send_json(linka_nko_process_due_subscriptions());
+    wp_send_json(linka_nko_process_due_subscriptions(), 200);
 }
 
 function linka_nko_run_internal_recurring_path(): void
@@ -409,10 +409,10 @@ function linka_nko_run_internal_recurring_path(): void
     }
 
     if (!linka_nko_recurring_enabled()) {
-        wp_send_json(['ok' => true, 'enabled' => false, 'processed' => 0]);
+        wp_send_json(['ok' => true, 'enabled' => false, 'processed' => 0], 200);
     }
 
-    wp_send_json(linka_nko_process_due_subscriptions());
+    wp_send_json(linka_nko_process_due_subscriptions(), 200);
 }
 
 function linka_nko_process_due_subscriptions(): array
