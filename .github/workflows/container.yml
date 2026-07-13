@@ -39,6 +39,16 @@ jobs:
           docker run --rm \
             ${{ env.LOCAL_IMAGE }} \
             php -l /usr/src/wordpress/wp-content/mu-plugins/linka-nko-donations.php
+          docker run --rm \
+            ${{ env.LOCAL_IMAGE }} \
+            php -l /usr/src/wordpress/wp-content/mu-plugins/linka-nko-registries.php
+          docker run --rm \
+            ${{ env.LOCAL_IMAGE }} \
+            php -m | grep -qx imap
+          docker run --rm \
+            -v "${{ github.workspace }}/tests:/tests:ro" \
+            ${{ env.LOCAL_IMAGE }} \
+            php /tests/registries.php /usr/src/wordpress/wp-content/mu-plugins/linka-nko-registries.php
           docker run -d --rm \
             --name nko-linka-wordpress-smoke \
             -p 8080:8080 \
@@ -67,12 +77,12 @@ jobs:
         run: |
           printf '%s' '${{ secrets.YC_SA_JSON_CREDENTIALS }}' | docker login --username json_key --password-stdin cr.yandex
 
-      - name: Push image
+      - name: Push tested image
         if: github.event_name != 'pull_request'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: infra/wordpress/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do
+            docker tag "${LOCAL_IMAGE}" "$tag"
+            docker push "$tag"
+          done <<< "$IMAGE_TAGS"
