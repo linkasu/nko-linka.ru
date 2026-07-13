@@ -26,15 +26,13 @@ The importer accepts only messages from `reports@yoomoney.ru` whose first Yandex
 
 ## WordPress Admin
 
-Administrators can use `Реестры` in WordPress admin to:
+Administrators and users with the `Бухгалтер` role can use `Реестры` in WordPress admin to:
 
 - review stored daily payment and refund registries;
 - download an original YooKassa CSV;
-- upload a missing original CSV manually;
-- trigger a mailbox check manually;
 - download one consolidated transaction-level CSV for a selected month.
 
-The page and download handlers require `manage_options` and WordPress nonces. There are no public registry URLs or presigned links.
+Only administrators can upload a missing original CSV manually or trigger a mailbox check. The accountant role has only `read` and `view_linka_registries`; it cannot manage WordPress, users, content, plugins, settings, storage, or mail import. The page and download handlers require the dedicated capability and WordPress nonces. There are no public registry URLs or presigned links.
 
 ## Verification
 

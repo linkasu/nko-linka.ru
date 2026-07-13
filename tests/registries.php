@@ -12,6 +12,39 @@ final class WP_Error
     }
 }
 
+final class WP_Role
+{
+    public function __construct(public array $capabilities = [])
+    {
+    }
+
+    public function has_cap(string $capability): bool
+    {
+        return !empty($this->capabilities[$capability]);
+    }
+
+    public function add_cap(string $capability): void
+    {
+        $this->capabilities[$capability] = true;
+    }
+}
+
+$GLOBALS['linka_test_roles'] = [
+    'administrator' => new WP_Role(['manage_options' => true]),
+];
+
+function get_role(string $name): ?WP_Role
+{
+    return $GLOBALS['linka_test_roles'][$name] ?? null;
+}
+
+function add_role(string $name, string $label, array $capabilities): WP_Role
+{
+    $role = new WP_Role($capabilities);
+    $GLOBALS['linka_test_roles'][$name] = $role;
+    return $role;
+}
+
 function add_action(): void
 {
 }
@@ -36,6 +69,12 @@ function assert_same($expected, $actual, string $message): void
         exit(1);
     }
 }
+
+linka_nko_register_registry_roles();
+assert_same(true, get_role('administrator')->has_cap(LINKA_NKO_REGISTRY_CAPABILITY), 'Administrator registry capability');
+assert_same(true, get_role(LINKA_NKO_REGISTRY_ACCOUNTANT_ROLE)->has_cap('read'), 'Accountant read capability');
+assert_same(true, get_role(LINKA_NKO_REGISTRY_ACCOUNTANT_ROLE)->has_cap(LINKA_NKO_REGISTRY_CAPABILITY), 'Accountant registry capability');
+assert_same(false, get_role(LINKA_NKO_REGISTRY_ACCOUNTANT_ROLE)->has_cap('manage_options'), 'Accountant admin capability');
 
 $csv = implode("\n", [
     'РЕЕСТР ПЛАТЕЖЕЙ ПО ДОГОВОРУ НЭК.451387.01 (1403902)',

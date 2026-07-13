@@ -8,8 +8,11 @@ const LINKA_NKO_REGISTRY_IMPORT_PATH = '/internal/import-registries';
 const LINKA_NKO_REGISTRY_MAX_FILE_SIZE = 5242880;
 const LINKA_NKO_REGISTRY_CONTRACT = 'НЭК.451387.01';
 const LINKA_NKO_REGISTRY_SHOP_ID = '1403902';
+const LINKA_NKO_REGISTRY_CAPABILITY = 'view_linka_registries';
+const LINKA_NKO_REGISTRY_ACCOUNTANT_ROLE = 'linka_accountant';
 
 add_action('init', 'linka_nko_ensure_registry_schema', 2);
+add_action('init', 'linka_nko_register_registry_roles', 3);
 add_action('admin_menu', 'linka_nko_register_registries_admin_page');
 add_action('admin_post_linka_nko_upload_registry', 'linka_nko_upload_registry');
 add_action('admin_post_linka_nko_download_registry', 'linka_nko_download_registry');
@@ -21,6 +24,26 @@ function linka_nko_registry_table(): string
 {
     global $wpdb;
     return $wpdb->prefix . 'linka_yookassa_registries';
+}
+
+function linka_nko_register_registry_roles(): void
+{
+    $administrator = get_role('administrator');
+    if ($administrator instanceof WP_Role && !$administrator->has_cap(LINKA_NKO_REGISTRY_CAPABILITY)) {
+        $administrator->add_cap(LINKA_NKO_REGISTRY_CAPABILITY);
+    }
+
+    $accountant = get_role(LINKA_NKO_REGISTRY_ACCOUNTANT_ROLE);
+    if (!$accountant instanceof WP_Role) {
+        $accountant = add_role(LINKA_NKO_REGISTRY_ACCOUNTANT_ROLE, 'Бухгалтер', [
+            'read' => true,
+            LINKA_NKO_REGISTRY_CAPABILITY => true,
+        ]);
+    }
+    if ($accountant instanceof WP_Role) {
+        $accountant->add_cap('read');
+        $accountant->add_cap(LINKA_NKO_REGISTRY_CAPABILITY);
+    }
 }
 
 function linka_nko_ensure_registry_schema(): void
@@ -92,7 +115,7 @@ function linka_nko_register_registries_admin_page(): void
     add_menu_page(
         'Реестры YooKassa',
         'Реестры',
-        'manage_options',
+        LINKA_NKO_REGISTRY_CAPABILITY,
         'linka-nko-registries',
         'linka_nko_render_registries_admin_page',
         'dashicons-media-spreadsheet',
@@ -102,7 +125,7 @@ function linka_nko_register_registries_admin_page(): void
 
 function linka_nko_render_registries_admin_page(): void
 {
-    if (!current_user_can('manage_options')) {
+    if (!current_user_can(LINKA_NKO_REGISTRY_CAPABILITY)) {
         wp_die('Недостаточно прав.', '', ['response' => 403]);
     }
 
@@ -138,25 +161,27 @@ function linka_nko_render_registries_admin_page(): void
           <p class="description">В файл включаются все операции из ежедневных реестров платежей и возвратов за выбранный месяц.</p>
         </section>
 
-        <section>
-          <h2>Загрузить реестр вручную</h2>
-          <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="linka_nko_upload_registry">
-            <?php wp_nonce_field('linka_nko_upload_registry', 'linka_nko_registry_nonce'); ?>
-            <input type="file" name="registry_file" accept=".csv,text/csv" required>
-            <?php submit_button('Загрузить CSV', 'secondary', 'submit', false); ?>
-          </form>
-        </section>
+        <?php if (current_user_can('manage_options')) : ?>
+          <section>
+            <h2>Загрузить реестр вручную</h2>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+              <input type="hidden" name="action" value="linka_nko_upload_registry">
+              <?php wp_nonce_field('linka_nko_upload_registry', 'linka_nko_registry_nonce'); ?>
+              <input type="file" name="registry_file" accept=".csv,text/csv" required>
+              <?php submit_button('Загрузить CSV', 'secondary', 'submit', false); ?>
+            </form>
+          </section>
 
-        <section>
-          <h2>Получить из почты</h2>
-          <p>Адрес: <code>reestry@nkolinka.ru</code></p>
-          <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <input type="hidden" name="action" value="linka_nko_import_registries">
-            <?php wp_nonce_field('linka_nko_import_registries', 'linka_nko_registry_nonce'); ?>
-            <?php submit_button('Проверить почту', 'secondary', 'submit', false); ?>
-          </form>
-        </section>
+          <section>
+            <h2>Получить из почты</h2>
+            <p>Адрес: <code>reestry@nkolinka.ru</code></p>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+              <input type="hidden" name="action" value="linka_nko_import_registries">
+              <?php wp_nonce_field('linka_nko_import_registries', 'linka_nko_registry_nonce'); ?>
+              <?php submit_button('Проверить почту', 'secondary', 'submit', false); ?>
+            </form>
+          </section>
+        <?php endif; ?>
       </div>
 
       <h2>Сохраненные реестры</h2>
@@ -224,7 +249,7 @@ function linka_nko_admin_import_registries(): void
 
 function linka_nko_download_registry(): void
 {
-    if (!current_user_can('manage_options')) {
+    if (!current_user_can(LINKA_NKO_REGISTRY_CAPABILITY)) {
         wp_die('Недостаточно прав.', '', ['response' => 403]);
     }
 
@@ -246,7 +271,7 @@ function linka_nko_download_registry(): void
 
 function linka_nko_download_monthly_registry(): void
 {
-    linka_nko_registry_require_admin('linka_nko_download_monthly_registry');
+    linka_nko_registry_require_access('linka_nko_download_monthly_registry');
     $month = linka_nko_registry_parse_month((string) ($_GET['month'] ?? ''));
     if ($month === '') {
         wp_die('Некорректный месяц.', '', ['response' => 400]);
@@ -941,6 +966,14 @@ function linka_nko_registry_authenticated_sender(string $from, string $headers):
 function linka_nko_registry_require_admin(string $action): void
 {
     if (!current_user_can('manage_options')) {
+        wp_die('Недостаточно прав.', '', ['response' => 403]);
+    }
+    check_admin_referer($action, 'linka_nko_registry_nonce');
+}
+
+function linka_nko_registry_require_access(string $action): void
+{
+    if (!current_user_can(LINKA_NKO_REGISTRY_CAPABILITY)) {
         wp_die('Недостаточно прав.', '', ['response' => 403]);
     }
     check_admin_referer($action, 'linka_nko_registry_nonce');
