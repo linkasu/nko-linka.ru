@@ -35,6 +35,14 @@ function linka_nko_ensure_registry_schema(): void
     $charset_collate = $wpdb->get_charset_collate();
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
+    if (in_array($previous_version, ['20260713-1', '20260713-2'], true)) {
+        $duplicate_dates = (int) $wpdb->get_var("SELECT COUNT(*) FROM (SELECT register_date, register_type FROM {$table} GROUP BY register_date, register_type HAVING COUNT(*) > 1) duplicate_registries");
+        $legacy_index = $wpdb->get_row("SHOW INDEX FROM {$table} WHERE Key_name = 'register_date_type' LIMIT 1");
+        if ($duplicate_dates === 0 && is_object($legacy_index) && (int) $legacy_index->Non_unique === 1) {
+            $wpdb->query("ALTER TABLE {$table} DROP INDEX register_date_type");
+        }
+    }
+
     dbDelta("CREATE TABLE {$table} (
         id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
         register_date date NOT NULL,
@@ -58,10 +66,6 @@ function linka_nko_ensure_registry_schema(): void
         KEY storage_status (storage_status)
     ) {$charset_collate};");
 
-    if (in_array($previous_version, ['20260713-1', '20260713-2'], true)) {
-        $wpdb->query("UPDATE {$table} SET storage_status = 'stored' WHERE storage_status = 'pending'");
-    }
-
     $table_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
     $columns = $table_exists === $table ? $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0) : [];
     $indexes = $table_exists === $table ? $wpdb->get_results("SHOW INDEX FROM {$table}") : [];
@@ -74,6 +78,9 @@ function linka_nko_ensure_registry_schema(): void
         }
     }
     if ($table_exists === $table && array_diff($required_columns, $columns) === [] && $has_unique_date_type) {
+        if ($previous_version === '20260713-1') {
+            $wpdb->query("UPDATE {$table} SET storage_status = 'stored' WHERE storage_status = 'pending'");
+        }
         update_option('linka_nko_registry_schema_version', LINKA_NKO_REGISTRY_SCHEMA_VERSION, false);
     } else {
         error_log('YooKassa registry schema migration failed.');
@@ -321,6 +328,9 @@ function linka_nko_run_internal_registry_import(): void
 
 function linka_nko_store_registry(string $filename, string $content)
 {
+    if ((string) get_option('linka_nko_registry_schema_version') !== LINKA_NKO_REGISTRY_SCHEMA_VERSION) {
+        return new WP_Error('registry_schema_unavailable', 'Registry database schema is unavailable.');
+    }
     if (strlen($content) > LINKA_NKO_REGISTRY_MAX_FILE_SIZE) {
         return new WP_Error('registry_too_large', 'Registry file is too large.');
     }
@@ -670,97 +680,237 @@ function linka_nko_registry_get_content(object $registry)
 
 function linka_nko_import_registries_from_mail()
 {
-    if (!function_exists('imap_open')) {
-        return new WP_Error('registry_imap_unavailable', 'IMAP extension is unavailable.');
-    }
-    $host = trim((string) (getenv('REGISTRY_IMAP_HOST') ?: 'imap.yandex.ru'));
-    $port = (int) (getenv('REGISTRY_IMAP_PORT') ?: 993);
-    $username = trim((string) getenv('REGISTRY_IMAP_USERNAME'));
-    $password = (string) getenv('REGISTRY_IMAP_PASSWORD');
+    $host = trim((string) (getenv('REGISTRY_MAIL_HOST') ?: 'pop.yandex.ru'));
+    $port = (int) (getenv('REGISTRY_MAIL_PORT') ?: 995);
+    $username = trim((string) getenv('REGISTRY_MAIL_USERNAME'));
+    $password = (string) getenv('REGISTRY_MAIL_PASSWORD');
     if ($username === '' || $password === '') {
-        return new WP_Error('registry_imap_not_configured', 'Registry mailbox is not configured.');
+        return new WP_Error('registry_mail_not_configured', 'Registry mailbox is not configured.');
     }
 
-    $mailbox = sprintf('{%s:%d/imap/ssl}INBOX', $host, $port);
-    $imap = @imap_open($mailbox, $username, $password, OP_READONLY, 1, ['DISABLE_AUTHENTICATOR' => 'GSSAPI']);
-    if ($imap === false) {
-        imap_errors();
-        return new WP_Error('registry_imap_connection_failed', 'Could not connect to registry mailbox.');
+    $socket = linka_nko_registry_pop3_connect($host, $port, $username, $password);
+    if (is_wp_error($socket)) {
+        return $socket;
+    }
+    $uid_lines = linka_nko_registry_pop3_multiline($socket, 'UIDL');
+    if (is_wp_error($uid_lines)) {
+        fclose($socket);
+        return new WP_Error('registry_mail_uidl_failed', 'Could not read registry mailbox identifiers.');
     }
 
-    $since = gmdate('d-M-Y', time() - 45 * DAY_IN_SECONDS);
-    $messages = imap_search($imap, 'FROM "reports@yoomoney.ru" SINCE "' . $since . '"', SE_UID) ?: [];
+    $processed_uids = get_option('linka_nko_registry_mail_uids', []);
+    $processed_uids = is_array($processed_uids) ? $processed_uids : [];
+    $unseen_messages = [];
+    foreach ($uid_lines as $line) {
+        if (preg_match('/^(\d+)\s+(\S+)$/', $line, $uid_matches) === 1 && !isset($processed_uids[$uid_matches[2]])) {
+            $unseen_messages[(int) $uid_matches[1]] = $uid_matches[2];
+        }
+    }
+    ksort($unseen_messages);
+    $unseen_messages = array_slice($unseen_messages, 0, 100, true);
     $imported = 0;
     $duplicates = 0;
     $failed = 0;
-    foreach ($messages as $uid) {
-        $overview = imap_fetch_overview($imap, (string) $uid, FT_UID);
-        $raw_headers = (string) imap_fetchheader($imap, (string) $uid, FT_UID | FT_PEEK);
-        if (!linka_nko_registry_authenticated_sender((string) ($overview[0]->from ?? ''), $raw_headers)) {
+    $messages_checked = 0;
+    foreach ($unseen_messages as $message_number => $message_uid) {
+        $list = linka_nko_registry_pop3_command($socket, 'LIST ' . $message_number);
+        if (is_wp_error($list) || preg_match('/^\+OK\s+\d+\s+(\d+)/i', (string) $list, $size_matches) !== 1) {
             $failed++;
             continue;
         }
-        $structure = imap_fetchstructure($imap, (string) $uid, FT_UID);
-        if (!is_object($structure)) {
+        if ((int) $size_matches[1] > LINKA_NKO_REGISTRY_MAX_FILE_SIZE * 2) {
             $failed++;
             continue;
         }
-        foreach (linka_nko_registry_imap_attachments($imap, (int) $uid, $structure) as $attachment) {
+        $raw_message = linka_nko_registry_pop3_retrieve($socket, $message_number);
+        if (is_wp_error($raw_message)) {
+            $failed++;
+            continue;
+        }
+        $messages_checked++;
+        [$raw_headers] = linka_nko_registry_split_message($raw_message);
+        $from = linka_nko_registry_header_value($raw_headers, 'From');
+        if (!linka_nko_registry_authenticated_sender($from, $raw_headers)) {
+            $failed++;
+            $processed_uids[$message_uid] = time();
+            continue;
+        }
+        $message_failed = false;
+        foreach (linka_nko_registry_mail_attachments($raw_message) as $attachment) {
             if (!preg_match('/^yoomoney-(payments|refunds)-' . preg_quote(LINKA_NKO_REGISTRY_SHOP_ID, '/') . '-\d{4}-\d{2}-\d{2}\.csv$/i', $attachment['filename'])) {
                 continue;
             }
             $result = linka_nko_store_registry($attachment['filename'], $attachment['content']);
             if (is_wp_error($result)) {
                 $failed++;
+                $message_failed = true;
             } elseif ($result['duplicate']) {
                 $duplicates++;
             } else {
                 $imported++;
             }
         }
+        if (!$message_failed) {
+            $processed_uids[$message_uid] = time();
+        }
     }
-    imap_close($imap);
+    linka_nko_registry_pop3_command($socket, 'QUIT');
+    fclose($socket);
 
-    return ['messages_checked' => count($messages), 'imported' => $imported, 'duplicates' => $duplicates, 'failed' => $failed];
+    if (count($processed_uids) > 2000) {
+        asort($processed_uids);
+        $processed_uids = array_slice($processed_uids, -2000, null, true);
+    }
+    update_option('linka_nko_registry_mail_uids', $processed_uids, false);
+
+    return ['messages_checked' => $messages_checked, 'imported' => $imported, 'duplicates' => $duplicates, 'failed' => $failed];
 }
 
-function linka_nko_registry_imap_attachments($imap, int $uid, object $structure, string $prefix = ''): array
+function linka_nko_registry_pop3_connect(string $host, int $port, string $username, string $password)
 {
-    $attachments = [];
-    $parts = isset($structure->parts) && is_array($structure->parts) ? $structure->parts : [];
-    foreach ($parts as $index => $part) {
-        $part_number = $prefix === '' ? (string) ($index + 1) : $prefix . '.' . ($index + 1);
-        if (isset($part->parts) && is_array($part->parts)) {
-            $attachments = array_merge($attachments, linka_nko_registry_imap_attachments($imap, $uid, $part, $part_number));
-        }
-        $filename = linka_nko_registry_imap_filename($part);
-        if ($filename === '') {
-            continue;
-        }
-        $content = (string) imap_fetchbody($imap, (string) $uid, $part_number, FT_UID | FT_PEEK);
-        if ((int) ($part->encoding ?? 0) === ENCBASE64) {
-            $content = base64_decode($content, true) ?: '';
-        } elseif ((int) ($part->encoding ?? 0) === ENCQUOTEDPRINTABLE) {
-            $content = quoted_printable_decode($content);
-        }
-        $attachments[] = ['filename' => $filename, 'content' => $content];
+    $context = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true]]);
+    $socket = @stream_socket_client('ssl://' . $host . ':' . $port, $error_code, $error_message, 20, STREAM_CLIENT_CONNECT, $context);
+    if (!is_resource($socket)) {
+        return new WP_Error('registry_mail_connection_failed', 'Could not connect to registry mailbox.');
     }
-    return $attachments;
+    stream_set_timeout($socket, 30);
+    $greeting = fgets($socket);
+    if (!is_string($greeting) || !str_starts_with($greeting, '+OK')) {
+        fclose($socket);
+        return new WP_Error('registry_mail_connection_failed', 'Registry mailbox rejected the connection.');
+    }
+    $user_result = linka_nko_registry_pop3_command($socket, 'USER ' . $username);
+    $pass_result = is_wp_error($user_result) ? $user_result : linka_nko_registry_pop3_command($socket, 'PASS ' . $password);
+    if (is_wp_error($pass_result)) {
+        fclose($socket);
+        return new WP_Error('registry_mail_authentication_failed', 'Registry mailbox authentication failed.');
+    }
+    return $socket;
 }
 
-function linka_nko_registry_imap_filename(object $part): string
+function linka_nko_registry_pop3_command($socket, string $command)
 {
-    foreach (['dparameters', 'parameters'] as $property) {
-        $parameters = isset($part->{$property}) && is_array($part->{$property}) ? $part->{$property} : [];
-        foreach ($parameters as $parameter) {
-            $attribute = strtolower((string) ($parameter->attribute ?? ''));
-            if (in_array($attribute, ['filename', 'name'], true)) {
-                $value = (string) ($parameter->value ?? '');
-                return sanitize_file_name(function_exists('imap_utf8') ? imap_utf8($value) : $value);
-            }
+    if (fwrite($socket, $command . "\r\n") === false) {
+        return new WP_Error('registry_mail_write_failed', 'Could not write to registry mailbox.');
+    }
+    $response = fgets($socket);
+    if (!is_string($response) || !str_starts_with($response, '+OK')) {
+        return new WP_Error('registry_mail_command_failed', 'Registry mailbox command failed.');
+    }
+    return trim($response);
+}
+
+function linka_nko_registry_pop3_multiline($socket, string $command)
+{
+    $response = linka_nko_registry_pop3_command($socket, $command);
+    if (is_wp_error($response)) {
+        return $response;
+    }
+    $lines = [];
+    while (($line = fgets($socket)) !== false) {
+        if (rtrim($line, "\r\n") === '.') {
+            return $lines;
+        }
+        if (str_starts_with($line, '..')) {
+            $line = substr($line, 1);
+        }
+        $lines[] = trim($line);
+    }
+    return new WP_Error('registry_mail_read_failed', 'Could not read registry mailbox response.');
+}
+
+function linka_nko_registry_pop3_retrieve($socket, int $message_number)
+{
+    $response = linka_nko_registry_pop3_command($socket, 'RETR ' . $message_number);
+    if (is_wp_error($response)) {
+        return $response;
+    }
+    $message = '';
+    while (($line = fgets($socket)) !== false) {
+        if (rtrim($line, "\r\n") === '.') {
+            return $message;
+        }
+        if (str_starts_with($line, '..')) {
+            $line = substr($line, 1);
+        }
+        $message .= $line;
+        if (strlen($message) > LINKA_NKO_REGISTRY_MAX_FILE_SIZE * 2) {
+            return new WP_Error('registry_mail_message_too_large', 'Registry email is too large.');
         }
     }
-    return '';
+    return new WP_Error('registry_mail_read_failed', 'Could not read registry email.');
+}
+
+function linka_nko_registry_mail_attachments(string $raw_message): array
+{
+    [$headers, $body] = linka_nko_registry_split_message($raw_message);
+    return linka_nko_registry_mime_attachments($headers, $body, 0);
+}
+
+function linka_nko_registry_mime_attachments(string $headers, string $body, int $depth): array
+{
+    if ($depth > 8) {
+        return [];
+    }
+    $content_type = linka_nko_registry_header_value($headers, 'Content-Type');
+    $boundary = linka_nko_registry_mime_parameter($content_type, 'boundary');
+    if (stripos($content_type, 'multipart/') === 0 && $boundary !== '') {
+        $attachments = [];
+        $parts = preg_split('/^--' . preg_quote($boundary, '/') . '(?:--)?[ \t]*\r?$/m', $body);
+        foreach (array_slice(is_array($parts) ? $parts : [], 1) as $part) {
+            [$part_headers, $part_body] = linka_nko_registry_split_message(ltrim($part, "\r\n"));
+            $attachments = array_merge($attachments, linka_nko_registry_mime_attachments($part_headers, $part_body, $depth + 1));
+        }
+        return $attachments;
+    }
+
+    $disposition = linka_nko_registry_header_value($headers, 'Content-Disposition');
+    $filename = linka_nko_registry_mime_parameter($disposition, 'filename') ?: linka_nko_registry_mime_parameter($content_type, 'name');
+    if ($filename === '') {
+        return [];
+    }
+    $encoding = strtolower(linka_nko_registry_header_value($headers, 'Content-Transfer-Encoding'));
+    if ($encoding === 'base64') {
+        $decoded = base64_decode(preg_replace('/\s+/', '', $body) ?: '', true);
+        $body = is_string($decoded) ? $decoded : '';
+    } elseif ($encoding === 'quoted-printable') {
+        $body = quoted_printable_decode($body);
+    }
+    if (strlen($body) > LINKA_NKO_REGISTRY_MAX_FILE_SIZE) {
+        return [];
+    }
+    return [['filename' => sanitize_file_name(linka_nko_registry_decode_mime_header($filename)), 'content' => $body]];
+}
+
+function linka_nko_registry_split_message(string $message): array
+{
+    $parts = preg_split('/\r?\n\r?\n/', $message, 2);
+    return [(string) ($parts[0] ?? ''), (string) ($parts[1] ?? '')];
+}
+
+function linka_nko_registry_header_value(string $headers, string $name): string
+{
+    $headers = preg_replace('/\r?\n[ \t]+/', ' ', $headers) ?: '';
+    return preg_match('/^' . preg_quote($name, '/') . ':\s*(.+)$/mi', $headers, $matches) === 1 ? trim($matches[1]) : '';
+}
+
+function linka_nko_registry_mime_parameter(string $header, string $name): string
+{
+    if (preg_match('/(?:^|;)\s*' . preg_quote($name, '/') . '\*?\s*=\s*(?:UTF-8\'\')?("[^"]*"|[^;\s]+)/i', $header, $matches) !== 1) {
+        return '';
+    }
+    return rawurldecode(trim($matches[1], "\"' \t"));
+}
+
+function linka_nko_registry_decode_mime_header(string $value): string
+{
+    if (function_exists('iconv_mime_decode')) {
+        $decoded = iconv_mime_decode($value, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
+        if (is_string($decoded)) {
+            return $decoded;
+        }
+    }
+    return $value;
 }
 
 function linka_nko_registry_authenticated_sender(string $from, string $headers): bool
@@ -774,7 +924,16 @@ function linka_nko_registry_authenticated_sender(string $from, string $headers):
     }
     $authentication_results = (string) $matches[1];
     $authentication_results = preg_replace('/\r?\n[ \t]+/', ' ', $authentication_results) ?: '';
-    $trusted_yandex_server = preg_match('/^[a-z0-9.-]+\.yandex\.net\s*;/i', $authentication_results) === 1;
+    if (preg_match('/^(mail-[a-z0-9.-]+\.yandex\.net)\s*;/i', $authentication_results, $server_matches) !== 1) {
+        return false;
+    }
+    $authentication_position = stripos($headers, 'Authentication-Results:');
+    $trace_headers = $authentication_position === false ? '' : substr($headers, 0, $authentication_position);
+    $trace_headers = preg_replace('/\r?\n[ \t]+/', ' ', $trace_headers) ?: '';
+    $trusted_yandex_server = preg_match(
+        '/^Received:\s+from\s+' . preg_quote($server_matches[1], '/') . '\b.*\bby\s+postback[a-z0-9.-]*\.mail\.yandex\.net\b/mi',
+        $trace_headers
+    ) === 1;
     $dkim_passed = preg_match('/\bdkim=pass\b[^;]*header\.i=@yoomoney\.ru\b/i', $authentication_results) === 1;
     $spf_passed = preg_match('/\bspf=pass\b[^;]*smtp\.mail=reports@yoomoney\.ru\b/i', $authentication_results) === 1;
     $return_path_matches = preg_match('/^Return-Path:\s*<?reports@yoomoney\.ru>?\s*$/mi', $headers) === 1;
