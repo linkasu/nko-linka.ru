@@ -60,6 +60,8 @@ Also verify:
 - Public requests to `/internal`, `/internal/run-recurring-donations`, and `/internal/*` return the Gateway's static `404`.
 - YC timer `nko-linka-recurring-donations` is active and invokes `/internal/run-recurring-donations` directly with the runtime service account every 15 minutes.
 - YC timer `nko-linka-donation-total-sync` is active and invokes `/internal/sync-donations` hourly at minute 7; the response must report `payments_synced=true`.
+- YC timer `nko-linka-yookassa-registry-import` is active and invokes `/internal/import-registries` daily at `02:30 UTC`; the response must report `ok=true`.
+- The YooKassa registry bucket is private, anonymous object requests return `403`, and original/monthly downloads work only for WordPress administrators.
 - The recurring runner returns HTTP `200`; before a manual invocation, confirm there are no unexpected due or `charging` subscriptions.
 
 ## 6. Secrets
@@ -68,4 +70,5 @@ Also verify:
 - Postbox SMTP/API secrets: Lockbox `nko-linka-postbox`.
 - YooKassa payment secrets: Lockbox `nko-linka-yookassa`; bind only required `YOOKASSA_*` runtime variables.
 - Initial WordPress user passwords: Lockbox `nko-linka-wordpress-users`.
+- Registry S3 and mailbox secrets: Lockbox `nko-linka-registries`.
 - Do not print Lockbox payloads in logs or commit exported payload files.
