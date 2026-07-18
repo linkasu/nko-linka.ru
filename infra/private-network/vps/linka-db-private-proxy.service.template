@@ -1,0 +1,10 @@
+[Unit]
+Description=LINKa temporary private database cutover proxy
+Requires=linka-db-private-proxy.socket
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd 127.0.0.1:{{MARIADB_PORT}}
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true

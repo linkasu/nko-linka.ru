@@ -1,0 +1,16 @@
+[Unit]
+Description=LINKa temporary dual-path database cutover firewall
+After=network-online.target wg-quick@wg0.service
+Wants=network-online.target
+Requires=wg-quick@wg0.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sh -c '/usr/sbin/nft list table inet linka_vps_db_cutover >/dev/null 2>&1 || /usr/sbin/nft add table inet linka_vps_db_cutover'
+ExecStart=/bin/sh -c '{ /usr/bin/printf "flush table inet linka_vps_db_cutover\n"; /usr/bin/cat /etc/linka-private-network/cutover-firewall.nft; } | /usr/sbin/nft --file -'
+ExecReload=/bin/sh -c '{ /usr/bin/printf "flush table inet linka_vps_db_cutover\n"; /usr/bin/cat /etc/linka-private-network/cutover-firewall.nft; } | /usr/sbin/nft --file -'
+ExecStop=-/usr/sbin/nft delete table inet linka_vps_db_cutover
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

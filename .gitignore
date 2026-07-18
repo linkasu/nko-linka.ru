@@ -19,3 +19,10 @@ wp-content/uploads/
 packageDescription.xml
 todo.md
 secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+infra/private-network/generated-*/
+infra/yandex/blue-green/release-manifest.json
+infra/yandex/blue-green/release-*/

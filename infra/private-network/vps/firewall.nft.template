@@ -1,0 +1,19 @@
+table inet linka_vps_db {
+  chain input {
+    type filter hook input priority -10; policy accept;
+    iifname "{{VPS_PUBLIC_INTERFACE}}" ip saddr {{YC_GATEWAY_PUBLIC_IP}} udp dport {{WIREGUARD_PORT}} accept
+    iifname "{{VPS_PUBLIC_INTERFACE}}" udp dport {{WIREGUARD_PORT}} drop
+    iifname "{{WG_INTERFACE}}" ip saddr {{YC_PRIVATE_SUBNET_CIDR}} ip daddr {{VPS_WG_ADDRESS}} tcp dport {{MARIADB_PORT}} accept
+    iifname "lo" ip daddr 127.0.0.1 tcp dport {{MARIADB_PORT}} accept
+    tcp dport {{MARIADB_PORT}} drop
+  }
+
+  # Docker-published ports are DNATed into FORWARD rather than INPUT.
+  chain forward {
+    type filter hook forward priority -10; policy accept;
+    ct state invalid drop
+    ct state established,related accept
+    iifname "{{WG_INTERFACE}}" ip saddr {{YC_PRIVATE_SUBNET_CIDR}} tcp dport {{MARIADB_PORT}} accept
+    tcp dport {{MARIADB_PORT}} drop
+  }
+}

@@ -1,0 +1,12 @@
+table inet linka_vps_db_cutover {
+  chain prerouting {
+    type nat hook prerouting priority -110; policy accept;
+    iifname "{{WG_INTERFACE}}" ip saddr {{YC_PRIVATE_SUBNET_CIDR}} ip daddr {{VPS_WG_ADDRESS}} tcp dport {{MARIADB_PORT}} redirect to :{{VPS_PRIVATE_PROXY_PORT}}
+  }
+
+  chain input {
+    type filter hook input priority -20; policy accept;
+    iifname "{{WG_INTERFACE}}" ip saddr {{YC_PRIVATE_SUBNET_CIDR}} tcp dport {{VPS_PRIVATE_PROXY_PORT}} accept
+    tcp dport {{VPS_PRIVATE_PROXY_PORT}} drop
+  }
+}

@@ -1,0 +1,10 @@
+[Interface]
+Address = {{VPS_WG_ADDRESS_CIDR}}
+ListenPort = {{WIREGUARD_PORT}}
+PrivateKey = {{WG_PRIVATE_KEY}}
+
+[Peer]
+PublicKey = {{GATEWAY_WG_PUBLIC_KEY}}
+AllowedIPs = {{GATEWAY_WG_ADDRESS}}/32, {{YC_PRIVATE_SUBNET_CIDR}}
+Endpoint = {{YC_GATEWAY_PUBLIC_IP}}:{{WIREGUARD_PORT}}
+PersistentKeepalive = 25

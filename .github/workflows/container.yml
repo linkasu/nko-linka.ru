@@ -45,6 +45,44 @@ jobs:
           docker run --rm \
             -v "${{ github.workspace }}/tests:/tests:ro" \
             ${{ env.LOCAL_IMAGE }} \
+            php /tests/recurring-state.php /usr/src/wordpress/wp-content/mu-plugins/linka-nko-recurring-state.php
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace:ro" \
+            --workdir /workspace \
+            ${{ env.LOCAL_IMAGE }} \
+            php tests/donations-security.php
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace:ro" \
+            --workdir /workspace \
+            ${{ env.LOCAL_IMAGE }} \
+            php tests/retention.php
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace:ro" \
+            --workdir /workspace \
+            ${{ env.LOCAL_IMAGE }} \
+            php tests/blue-green.php
+          docker run --rm \
+            -v "${{ github.workspace }}/tests:/tests:ro" \
+            ${{ env.LOCAL_IMAGE }} \
+            php /tests/readiness.php /usr/src/wordpress/readyz.php
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace:ro" \
+            --workdir /workspace \
+            ${{ env.LOCAL_IMAGE }} \
+            php tests/source-policy.php /workspace
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace:ro" \
+            --workdir /workspace \
+            ${{ env.LOCAL_IMAGE }} \
+            php tests/private-network-config.php
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace:ro" \
+            --workdir /workspace \
+            ${{ env.LOCAL_IMAGE }} \
+            php infra/private-network/validate-config.php --check-template infra/private-network/network.env.example infra/mariadb/.env.example
+          docker run --rm \
+            -v "${{ github.workspace }}/tests:/tests:ro" \
+            ${{ env.LOCAL_IMAGE }} \
             php /tests/registries.php /usr/src/wordpress/wp-content/mu-plugins/linka-nko-registries.php
           docker run -d --rm \
             --name nko-linka-wordpress-smoke \
@@ -53,9 +91,13 @@ jobs:
             -e WORDPRESS_DB_NAME=wordpress \
             -e WORDPRESS_DB_USER=wordpress \
             -e WORDPRESS_DB_PASSWORD=wordpress \
+            -e LINKA_NKO_READINESS_DB_TIMEOUT_SECONDS=1 \
             ${{ env.LOCAL_IMAGE }}
           sleep 10
           curl --fail --silent --show-error http://127.0.0.1:8080/healthz.php
+          readiness_status="$(curl --silent --show-error --output /tmp/readyz-body --write-out '%{http_code}' http://127.0.0.1:8080/readyz.php)"
+          test "$readiness_status" = "503"
+          test "$(tr -d '\n' < /tmp/readyz-body)" = '{"status":"not_ready"}'
           docker stop nko-linka-wordpress-smoke
 
       - name: Docker metadata

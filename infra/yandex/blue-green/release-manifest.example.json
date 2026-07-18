@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "releaseId": "__REQUIRED__",
+  "image": "cr.yandex/__REQUIRED_REPOSITORY__@sha256:__REQUIRED_64_HEX_DIGEST__",
+  "stableContainerId": "__REQUIRED__",
+  "candidateContainerId": "__REQUIRED__",
+  "networkId": "__REQUIRED__",
+  "runtimeServiceAccountId": "__REQUIRED__",
+  "gatewayId": "__REQUIRED__",
+  "gatewayServiceAccountId": "__REQUIRED__",
+  "publicHost": "nkolinka.ru",
+  "resources": {
+    "memory": "__REQUIRED__",
+    "cores": 1,
+    "coreFraction": 100,
+    "executionTimeout": "300s",
+    "concurrency": 1,
+    "minInstances": 0,
+    "zoneInstancesLimit": 1,
+    "zoneRequestsLimit": 1,
+    "logGroupId": "__REQUIRED__",
+    "minLogLevel": "info",
+    "metadataOptions": {
+      "awsV1HttpEndpoint": "disabled",
+      "gceHttpEndpoint": "enabled"
+    }
+  },
+  "environment": {
+    "LINKA_NKO_READINESS_DB_TIMEOUT_SECONDS": "2",
+    "__REQUIRED_COMPLETE_NON_SECRET_ENV__": "__REQUIRED__"
+  },
+  "secrets": [
+    {
+      "id": "__REQUIRED__",
+      "versionId": "__REQUIRED__",
+      "key": "__REQUIRED__",
+      "environmentVariable": "__REQUIRED__"
+    }
+  ],
+  "mounts": [
+    {
+      "type": "object-storage",
+      "mountPoint": "/var/www/html/wp-content/uploads",
+      "bucket": "__REQUIRED__",
+      "mode": "rw"
+    }
+  ]
+}

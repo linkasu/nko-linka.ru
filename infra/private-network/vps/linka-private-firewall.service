@@ -1,0 +1,15 @@
+[Unit]
+Description=LINKa private database firewall
+After=network-pre.target
+Before=docker.service
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sh -c '/usr/sbin/nft list table inet linka_vps_db >/dev/null 2>&1 || /usr/sbin/nft add table inet linka_vps_db'
+ExecStart=/bin/sh -c '{ /usr/bin/printf "flush table inet linka_vps_db\n"; /usr/bin/cat /etc/linka-private-network/firewall.nft; } | /usr/sbin/nft --file -'
+ExecReload=/bin/sh -c '{ /usr/bin/printf "flush table inet linka_vps_db\n"; /usr/bin/cat /etc/linka-private-network/firewall.nft; } | /usr/sbin/nft --file -'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

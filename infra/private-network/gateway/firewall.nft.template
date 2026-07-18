@@ -1,0 +1,15 @@
+table inet linka_gateway {
+  chain input {
+    type filter hook input priority -10; policy accept;
+    iifname "{{YC_GATEWAY_PUBLIC_INTERFACE}}" ip saddr {{VPS_PUBLIC_IP}} udp dport {{WIREGUARD_PORT}} accept
+    iifname "{{YC_GATEWAY_PUBLIC_INTERFACE}}" udp dport {{WIREGUARD_PORT}} drop
+  }
+
+  chain forward {
+    type filter hook forward priority -10; policy drop;
+    ct state invalid drop
+    ct state established,related accept
+    iifname "{{YC_GATEWAY_VPC_INTERFACE}}" oifname "{{WG_INTERFACE}}" ip saddr {{YC_PRIVATE_SUBNET_CIDR}} ip daddr {{VPS_WG_ADDRESS}} tcp dport {{MARIADB_PORT}} accept
+    iifname "{{WG_INTERFACE}}" oifname "{{YC_GATEWAY_VPC_INTERFACE}}" ip saddr {{VPS_WG_ADDRESS}} ip daddr {{YC_PRIVATE_SUBNET_CIDR}} tcp sport {{MARIADB_PORT}} accept
+  }
+}

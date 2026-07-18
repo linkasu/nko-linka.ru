@@ -15,6 +15,7 @@ MARIADB_ROOT_PASSWORD=...
 WORDPRESS_DB_NAME=nko_linka_wordpress
 WORDPRESS_DB_USER=nko_linka_wp
 WORDPRESS_DB_PASSWORD=...
+MARIADB_BIND_ADDRESS=<VPS_WIREGUARD_ADDRESS>
 ```
 
 Start:
@@ -29,4 +30,9 @@ Backup:
 ./backup.sh
 ```
 
-Port `3306` is exposed for YC Serverless WordPress. Use strong generated credentials and do not reuse them elsewhere.
+Port `3306` must be published only on the VPS WireGuard address. The Compose configuration rejects a missing bind address; do not use `0.0.0.0`, `::` or the VPS public address. Validate the matching private-network configuration before rollout:
+
+```sh
+php ../private-network/validate-config.php ../private-network/network.env .env
+docker compose config --quiet
+```
