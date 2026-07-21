@@ -1009,6 +1009,27 @@ function linka_nko_enqueue_payment_fundraising_event(int $payment_id, string $ki
     );
 }
 
+function linka_nko_payment_terminal_fundraising_event_exists(int $payment_id, string $status): bool
+{
+    $kinds = $status === 'succeeded'
+        ? ['payment_succeeded', 'recurring_charge_succeeded']
+        : ['payment_cancelled', 'recurring_charge_failed'];
+
+    global $wpdb;
+    $tables = linka_nko_donation_tables();
+    foreach ($kinds as $kind) {
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT 1 FROM {$tables['fundraising_outbox']} WHERE event_key = %s LIMIT 1",
+            linka_nko_fundraising_event_key('payment', $payment_id, $kind)
+        ));
+        if ((string) $exists === '1') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function linka_nko_enqueue_subscription_cancelled_fundraising_event(int $subscription_id, string $occurred_at): bool
 {
     return linka_nko_enqueue_fundraising_event(
@@ -1468,12 +1489,20 @@ function linka_nko_migrate_payment_consent_evidence(): bool
 
 function linka_nko_sync_verified_payment_from_yookassa(array $payment, ?int $fallback_local_payment_id): bool
 {
-    // Sync can deliver an activation email, whose established path owns its own transaction and commit.
-    // Direct paths rely on idempotent event keys; recurring submission already owns its transaction.
-    return linka_nko_sync_payment_from_yookassa($payment, $fallback_local_payment_id);
+    global $wpdb;
+
+    $post_sync = [];
+    $wpdb->query('START TRANSACTION');
+    if (!linka_nko_sync_payment_from_yookassa($payment, $fallback_local_payment_id, true, $post_sync)) {
+        $wpdb->query('ROLLBACK');
+        return false;
+    }
+    $wpdb->query('COMMIT');
+
+    return linka_nko_finalize_payment_sync($post_sync);
 }
 
-function linka_nko_sync_payment_from_yookassa(array $payment, ?int $fallback_local_payment_id): bool
+function linka_nko_sync_payment_from_yookassa(array $payment, ?int $fallback_local_payment_id, bool $defer_post_sync = false, array &$post_sync = []): bool
 {
     global $wpdb;
     $tables = linka_nko_donation_tables();
@@ -1548,11 +1577,14 @@ function linka_nko_sync_payment_from_yookassa(array $payment, ?int $fallback_loc
                 'cancellation_reason' => $reason,
                 'updated_at' => linka_nko_utc_now(),
             ], $where, ['%s', '%s'], $where_format);
+        } elseif ($existing_payment !== null) {
+            $reason = (string) $existing_payment->cancellation_reason;
         }
     }
 
-    $status_changed = $existing_payment !== null && $status !== $current_status;
-    if ($status_changed && $local_payment_id > 0 && ($status === 'succeeded' || $status === 'canceled')) {
+    if ($local_payment_id > 0
+        && ($status === 'succeeded' || $status === 'canceled')
+        && !linka_nko_payment_terminal_fundraising_event_exists($local_payment_id, $status)) {
         $kind = $status === 'succeeded'
             ? ($is_recurring_charge ? 'recurring_charge_succeeded' : 'payment_succeeded')
             : ($is_recurring_charge ? 'recurring_charge_failed' : 'payment_cancelled');
@@ -1561,6 +1593,39 @@ function linka_nko_sync_payment_from_yookassa(array $payment, ?int $fallback_loc
             return false;
         }
     }
+
+    $post_sync = [
+        'subscription' => $subscription,
+        'subscription_id' => $subscription_id,
+        'status' => $status,
+        'payment_method_id' => $payment_method_id,
+        'payment_method_saved' => $payment_method_saved,
+        'local_payment_id' => $local_payment_id,
+        'recoverable_local_failure' => $recoverable_local_failure,
+        'tables' => $tables,
+        'where' => $where,
+        'where_format' => $where_format,
+    ];
+    if ($defer_post_sync) {
+        return true;
+    }
+
+    return linka_nko_finalize_payment_sync($post_sync);
+}
+
+function linka_nko_finalize_payment_sync(array $post_sync): bool
+{
+    global $wpdb;
+    $subscription = $post_sync['subscription'] ?? null;
+    $subscription_id = (int) ($post_sync['subscription_id'] ?? 0);
+    $status = (string) ($post_sync['status'] ?? '');
+    $payment_method_id = (string) ($post_sync['payment_method_id'] ?? '');
+    $payment_method_saved = !empty($post_sync['payment_method_saved']);
+    $local_payment_id = (int) ($post_sync['local_payment_id'] ?? 0);
+    $recoverable_local_failure = !empty($post_sync['recoverable_local_failure']);
+    $tables = $post_sync['tables'] ?? [];
+    $where = $post_sync['where'] ?? [];
+    $where_format = $post_sync['where_format'] ?? [];
 
     if ($subscription !== null && (string) $subscription->status === 'canceled') {
         $wpdb->update($tables['payments'], [
