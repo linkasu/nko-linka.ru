@@ -80,6 +80,7 @@ $specs = linka_nko_retention_query_specs(linka_nko_donation_tables(), $cutoffs);
 retention_assert(str_contains($specs['stale_attempt_payments']['count'], "status IN ('pending', 'waiting_for_capture', 'failed', 'canceled')"), 'Failed/pending retention query is incomplete');
 retention_assert(str_contains($specs['successful_payments']['count'], "status = 'succeeded'"), 'Successful retention query is incomplete');
 retention_assert(str_contains($specs['consent_evidence']['apply'], 'INTERVAL 5 YEAR'), 'Consent evidence retention query is incomplete');
+retention_assert(str_contains($specs['consent_evidence']['apply'], 'consent_version = NULL') && str_contains($specs['consent_evidence']['apply'], 'offer_accepted_at = NULL'), 'Separate consent evidence is not removed by retention cleanup');
 
 $GLOBALS['wpdb'] = new RetentionTestDatabase();
 $dry_run = linka_nko_run_retention_cleanup(true, 'admin');

@@ -9,8 +9,9 @@ require_once __DIR__ . '/linka-nko-retention.php';
 const LINKA_NKO_DONATION_AMOUNTS = [500, 1000, 3000, 5000];
 const LINKA_NKO_DONATION_MIN_AMOUNT = 100;
 const LINKA_NKO_DONATION_MAX_AMOUNT = 300000;
-const LINKA_NKO_DONATION_SCHEMA_VERSION = '20260721-3';
-const LINKA_NKO_PRIVACY_VERSION = '2026-07-18';
+const LINKA_NKO_DONATION_SCHEMA_VERSION = '20260824-1';
+const LINKA_NKO_PRIVACY_VERSION = 'order-5-2026-08-19';
+const LINKA_NKO_DONATION_CONSENT_VERSION = 'tracker-29-2026-08-24';
 const LINKA_NKO_DONATION_OFFER_VERSION = '2026-07-18';
 const LINKA_NKO_DONATION_FREQUENCY_ONE_TIME = 'one_time';
 const LINKA_NKO_DONATION_FREQUENCY_MONTHLY = 'monthly';
@@ -123,13 +124,21 @@ function linka_nko_render_donation_form(): string
         </label>
 
         <label class="donation-form__consent">
-          <input type="checkbox" name="donor_consent" value="1" required>
+          <input type="checkbox" name="offer_accepted" value="1" required>
           <span>
-            <strong>Согласен с условиями</strong>
-            <span>Я ознакомился с <a href="<?php echo esc_url(home_url('/donation-offer/')); ?>" target="_blank" rel="noopener">публичной офертой</a> и <a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>" target="_blank" rel="noopener">политикой обработки персональных данных</a>, согласен на обработку персональных данных и понимаю, что пожертвование не является оплатой товаров или услуг.</span>
+            <strong>Принимаю условия пожертвования</strong>
+            <span>Я принимаю условия <a href="<?php echo esc_url(home_url('/donation-offer/')); ?>" target="_blank" rel="noopener">публичной оферты</a> и понимаю, что пожертвование не является оплатой товаров или услуг.</span>
             <?php if ($recurring_enabled) : ?>
-              <span>Для ежемесячного пожертвования я также соглашаюсь на сохранение способа оплаты YooKassa и последующие ежемесячные списания выбранной суммы до самостоятельного отключения по ссылке управления.</span>
+              <span>Для ежемесячного пожертвования я также принимаю условия сохранения способа оплаты YooKassa и последующих ежемесячных списаний выбранной суммы до самостоятельного отключения по ссылке управления.</span>
             <?php endif; ?>
+          </span>
+        </label>
+
+        <label class="donation-form__consent">
+          <input type="checkbox" name="personal_data_consent" value="1" required>
+          <span>
+            <strong>Согласен на обработку персональных данных</strong>
+            <span>Я даю <a href="<?php echo esc_url(home_url('/donation-consent/')); ?>" target="_blank" rel="noopener">согласие на обработку персональных данных</a> и ознакомился с <a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>" target="_blank" rel="noopener">политикой обработки персональных данных</a>.</span>
           </span>
         </label>
 
@@ -274,14 +283,15 @@ function linka_nko_create_donation(): void
     $frequency = linka_nko_get_donation_frequency($request);
     $donor_name = linka_nko_sanitize_donor_name(linka_nko_scalar_string($request['donor_name'] ?? ''));
     $donor_email = sanitize_email(linka_nko_scalar_string($request['donor_email'] ?? ''));
-    $has_consent = isset($request['donor_consent']) && linka_nko_scalar_string($request['donor_consent']) === '1';
+    $has_offer_acceptance = isset($request['offer_accepted']) && linka_nko_scalar_string($request['offer_accepted']) === '1';
+    $has_personal_data_consent = isset($request['personal_data_consent']) && linka_nko_scalar_string($request['personal_data_consent']) === '1';
 
     if ($frequency === LINKA_NKO_DONATION_FREQUENCY_MONTHLY && !linka_nko_recurring_enabled()) {
         wp_die('Ежемесячные пожертвования будут включены после подключения автоплатежей YooKassa.', '', ['response' => 503]);
     }
 
-    if ($amount === null || $donor_name === '' || $donor_email === '' || !is_email($donor_email) || !$has_consent) {
-        wp_die('Проверьте сумму, ФИО, email и согласие с условиями пожертвования.', '', ['response' => 400]);
+    if ($amount === null || $donor_name === '' || $donor_email === '' || !is_email($donor_email) || !$has_offer_acceptance || !$has_personal_data_consent) {
+        wp_die('Проверьте сумму, ФИО, email, принятие оферты и согласие на обработку персональных данных.', '', ['response' => 400]);
     }
 
     global $wpdb;
@@ -882,6 +892,8 @@ function linka_nko_ensure_donation_schema(): void
         payment_method_saved tinyint(1) NOT NULL DEFAULT 0,
         cancellation_reason varchar(100) NULL,
         consent_at datetime NULL,
+        consent_version varchar(32) NULL,
+        offer_accepted_at datetime NULL,
         privacy_version varchar(32) NULL,
         offer_version varchar(32) NULL,
         consent_subject_hash char(64) NULL,
@@ -970,6 +982,9 @@ function linka_nko_ensure_donation_schema(): void
 
     $wpdb->query("UPDATE {$tables['subscriptions']} SET management_token_expires_at = DATE_ADD(COALESCE(canceled_at, updated_at), INTERVAL 30 DAY) WHERE status = 'canceled' AND cancellation_token_hash IS NOT NULL AND management_token_expires_at IS NULL");
     if (!linka_nko_migrate_payment_consent_evidence()) {
+        return;
+    }
+    if (!linka_nko_migrate_separate_payment_acceptance_evidence()) {
         return;
     }
 
@@ -1445,12 +1460,14 @@ function linka_nko_insert_payment(int $amount, string $donor_name, string $donor
         'frequency' => $frequency,
         'status' => 'pending',
         'consent_at' => $now,
+        'consent_version' => LINKA_NKO_DONATION_CONSENT_VERSION,
+        'offer_accepted_at' => $now,
         'privacy_version' => LINKA_NKO_PRIVACY_VERSION,
         'offer_version' => LINKA_NKO_DONATION_OFFER_VERSION,
         'consent_subject_hash' => linka_nko_consent_subject_hash($donor_email),
         'created_at' => $now,
         'updated_at' => $now,
-    ], ['%d', '%s', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s']);
+    ], ['%d', '%s', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s']);
 
     if (!$inserted) {
         return null;
@@ -1485,6 +1502,26 @@ function linka_nko_migrate_payment_consent_evidence(): bool
     }
 
     return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$tables['payments']} WHERE consent_at IS NULL") === 0;
+}
+
+function linka_nko_migrate_separate_payment_acceptance_evidence(): bool
+{
+    global $wpdb;
+    $tables = linka_nko_donation_tables();
+    for ($batch = 0; $batch < 20; $batch++) {
+        $payments = $wpdb->get_results("SELECT id, consent_at FROM {$tables['payments']} WHERE consent_at IS NOT NULL AND (consent_version IS NULL OR offer_accepted_at IS NULL) ORDER BY id ASC LIMIT 500");
+        if (!is_array($payments) || $payments === []) {
+            return true;
+        }
+        foreach ($payments as $payment) {
+            $wpdb->update($tables['payments'], [
+                'consent_version' => 'legacy-combined',
+                'offer_accepted_at' => (string) $payment->consent_at,
+            ], ['id' => (int) $payment->id], ['%s', '%s'], ['%d']);
+        }
+    }
+
+    return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$tables['payments']} WHERE consent_at IS NOT NULL AND (consent_version IS NULL OR offer_accepted_at IS NULL)") === 0;
 }
 
 function linka_nko_sync_verified_payment_from_yookassa(array $payment, ?int $fallback_local_payment_id): bool
