@@ -23,7 +23,7 @@ function linka_nko_retention_cutoffs(?DateTimeImmutable $now = null): array
 
 function linka_nko_retention_query_specs(array $tables, array $cutoffs): array
 {
-    $payment_anonymization = "donor_name = '', donor_email = '', yookassa_payment_id = NULL, idempotence_key = NULL, payment_method_id = NULL, payment_method_saved = 0, cancellation_reason = NULL, anonymized_at = %s";
+    $payment_anonymization = "donor_name = '', donor_email = '', donation_message = NULL, donation_message_consent_at = NULL, donation_message_consent_version = NULL, yookassa_payment_id = NULL, idempotence_key = NULL, payment_method_id = NULL, payment_method_saved = 0, cancellation_reason = NULL, anonymized_at = %s";
     $subscription_anonymization = "donor_name = '', donor_email = '', payment_method_id = NULL, cancellation_token_hash = NULL, management_token_ciphertext = NULL, management_token_expires_at = NULL, anonymized_at = %s";
 
     return [

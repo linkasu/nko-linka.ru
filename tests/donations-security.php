@@ -20,6 +20,11 @@ function sanitize_text_field($value): string
     return (string) $value;
 }
 
+function sanitize_textarea_field($value): string
+{
+    return strip_tags((string) $value);
+}
+
 function wp_unslash($value)
 {
     return $value;
@@ -155,6 +160,11 @@ function donations_security_assert(bool $condition, string $message): void
 
 $token = str_repeat('a', 48);
 $encrypted = linka_nko_encrypt_subscription_token($token);
+donations_security_assert(linka_nko_donation_message(" Привет!\nСпасибо ") === "Привет!\nСпасибо", 'Donation message lost line breaks');
+donations_security_assert(linka_nko_donation_message(str_repeat('x', 501)) === null, 'Oversized donation message was accepted');
+donations_security_assert(linka_nko_donation_message(['unexpected']) === null, 'Array donation message was accepted');
+donations_security_assert(!linka_nko_message_consent_valid('Спасибо', false), 'Message accepted without separate consent');
+donations_security_assert(linka_nko_message_consent_valid('Спасибо', true) && linka_nko_message_consent_valid('', false), 'Valid message or empty optional message rejected');
 donations_security_assert(is_string($encrypted) && $encrypted !== '' && !str_contains($encrypted, $token), 'Management token was not encrypted');
 donations_security_assert(linka_nko_decrypt_subscription_token($encrypted) === $token, 'Management token could not be decrypted for retry');
 donations_security_assert(linka_nko_decrypt_subscription_token(substr($encrypted, 0, -2) . 'xx') === null, 'Corrupted management token ciphertext was accepted');

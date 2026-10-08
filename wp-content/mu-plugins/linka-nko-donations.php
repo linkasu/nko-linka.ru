@@ -9,7 +9,9 @@ require_once __DIR__ . '/linka-nko-retention.php';
 const LINKA_NKO_DONATION_AMOUNTS = [500, 1000, 3000, 5000];
 const LINKA_NKO_DONATION_MIN_AMOUNT = 100;
 const LINKA_NKO_DONATION_MAX_AMOUNT = 300000;
-const LINKA_NKO_DONATION_SCHEMA_VERSION = '20260824-1';
+const LINKA_NKO_DONATION_SCHEMA_VERSION = '20261008-1';
+const LINKA_NKO_DONATION_MESSAGE_MAX_LENGTH = 500;
+const LINKA_NKO_DONATION_MESSAGE_CONSENT_VERSION = 'donation-message-2026-10-08';
 const LINKA_NKO_PRIVACY_VERSION = 'order-5-2026-08-19';
 const LINKA_NKO_DONATION_CONSENT_VERSION = 'tracker-29-2026-08-24';
 const LINKA_NKO_DONATION_OFFER_VERSION = '2026-07-18';
@@ -31,7 +33,7 @@ add_action('init', 'linka_nko_schedule_retention_cleanup', 3);
 add_action('linka_nko_daily_retention_cleanup', 'linka_nko_execute_scheduled_retention_cleanup');
 add_shortcode('linka_donation_form', 'linka_nko_render_donation_form');
 add_shortcode('linka_donation_subscription', 'linka_nko_render_subscription_page');
-add_shortcode('linka_donation_total', 'linka_nko_render_donation_total');
+add_shortcode('linka_donation_total', static fn(): string => '');
 add_action('admin_menu', 'linka_nko_register_donations_admin_page');
 add_action('admin_post_linka_nko_retention_dry_run', 'linka_nko_retention_dry_run_admin');
 
@@ -58,8 +60,6 @@ function linka_nko_render_donation_form(): string
     ?>
     <section class="donation-form" aria-labelledby="donation-form-title">
       <h2 id="donation-form-title">Сделать пожертвование</h2>
-
-      <?php echo linka_nko_render_donation_total(); ?>
 
       <?php if ($status === 'started') : ?>
         <p class="notice notice-success">Платеж создан. Если страница оплаты не открылась, попробуйте отправить форму еще раз.</p>
@@ -123,6 +123,17 @@ function linka_nko_render_donation_form(): string
           <input type="email" name="donor_email" autocomplete="email" required maxlength="190">
         </label>
 
+        <label>
+          <span>Добрые слова (необязательно)</span>
+          <textarea name="donation_message" rows="4" maxlength="<?php echo esc_attr((string) LINKA_NKO_DONATION_MESSAGE_MAX_LENGTH); ?>" aria-describedby="donation-message-hint"></textarea>
+          <small id="donation-message-hint">Текст увидят только администраторы АНО «Линка». Пожалуйста, не указывайте сведения о здоровье и данные других людей.</small>
+        </label>
+
+        <label class="donation-form__consent">
+          <input type="checkbox" name="donation_message_consent" value="1">
+          <span>Если я оставил(а) добрые слова, согласен(на) на хранение их текста вместе с моим пожертвованием и просмотр администраторами АНО «Линка» согласно <a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>" target="_blank" rel="noopener">политике обработки персональных данных</a>. Я могу запросить удаление текста по адресу feedback@linka.su. Без сообщения согласие не требуется.</span>
+        </label>
+
         <label class="donation-form__consent">
           <input type="checkbox" name="offer_accepted" value="1" required>
           <span>
@@ -149,12 +160,6 @@ function linka_nko_render_donation_form(): string
     </section>
     <?php
     return (string) ob_get_clean();
-}
-
-function linka_nko_render_donation_total(): string
-{
-    $total = linka_nko_get_successful_donation_total();
-    return '<div class="donation-total" aria-label="Общая сумма успешных пожертвований"><span>Уже пожертвовали</span><strong>' . esc_html(linka_nko_format_amount($total)) . ' ₽</strong></div>';
 }
 
 function linka_nko_render_subscription_path(): void
@@ -283,6 +288,8 @@ function linka_nko_create_donation(): void
     $frequency = linka_nko_get_donation_frequency($request);
     $donor_name = linka_nko_sanitize_donor_name(linka_nko_scalar_string($request['donor_name'] ?? ''));
     $donor_email = sanitize_email(linka_nko_scalar_string($request['donor_email'] ?? ''));
+    $message = linka_nko_donation_message($request['donation_message'] ?? '');
+    $has_message_consent = isset($request['donation_message_consent']) && linka_nko_scalar_string($request['donation_message_consent']) === '1';
     $has_offer_acceptance = isset($request['offer_accepted']) && linka_nko_scalar_string($request['offer_accepted']) === '1';
     $has_personal_data_consent = isset($request['personal_data_consent']) && linka_nko_scalar_string($request['personal_data_consent']) === '1';
 
@@ -290,8 +297,8 @@ function linka_nko_create_donation(): void
         wp_die('Ежемесячные пожертвования будут включены после подключения автоплатежей YooKassa.', '', ['response' => 503]);
     }
 
-    if ($amount === null || $donor_name === '' || $donor_email === '' || !is_email($donor_email) || !$has_offer_acceptance || !$has_personal_data_consent) {
-        wp_die('Проверьте сумму, ФИО, email, принятие оферты и согласие на обработку персональных данных.', '', ['response' => 400]);
+    if ($amount === null || $donor_name === '' || $donor_email === '' || !is_email($donor_email) || !linka_nko_message_consent_valid($message, $has_message_consent) || !$has_offer_acceptance || !$has_personal_data_consent) {
+        wp_die('Проверьте сумму, ФИО, email и согласия. Чтобы оставить добрые слова, отметьте отдельное согласие на хранение сообщения.', '', ['response' => 400]);
     }
 
     global $wpdb;
@@ -306,7 +313,7 @@ function linka_nko_create_donation(): void
         }
     }
 
-    $payment_id = linka_nko_insert_payment($amount, $donor_name, $donor_email, $frequency, $subscription_id);
+    $payment_id = linka_nko_insert_payment($amount, $donor_name, $donor_email, $frequency, $subscription_id, $message);
     if ($payment_id === null) {
         $wpdb->query('ROLLBACK');
         wp_die('Не удалось подготовить платеж. Попробуйте позже.', '', ['response' => 500]);
@@ -865,6 +872,22 @@ function linka_nko_recurring_enabled(): bool
     return filter_var(getenv('YOOKASSA_RECURRING_ENABLED'), FILTER_VALIDATE_BOOLEAN);
 }
 
+function linka_nko_donation_message($value): ?string
+{
+    if (!is_string($value)) {
+        return null;
+    }
+
+    $message = trim(sanitize_textarea_field($value));
+    $length = function_exists('mb_strlen') ? mb_strlen($message, 'UTF-8') : strlen($message);
+    return $length <= LINKA_NKO_DONATION_MESSAGE_MAX_LENGTH ? $message : null;
+}
+
+function linka_nko_message_consent_valid(?string $message, bool $consented): bool
+{
+    return $message !== null && ($message === '' || $consented);
+}
+
 function linka_nko_ensure_donation_schema(): void
 {
     if (get_option('linka_nko_donation_schema_version') === LINKA_NKO_DONATION_SCHEMA_VERSION) {
@@ -886,6 +909,9 @@ function linka_nko_ensure_donation_schema(): void
         currency char(3) NOT NULL DEFAULT 'RUB',
         donor_name varchar(160) NOT NULL,
         donor_email varchar(190) NOT NULL,
+        donation_message text NULL,
+        donation_message_consent_at datetime NULL,
+        donation_message_consent_version varchar(32) NULL,
         frequency varchar(20) NOT NULL DEFAULT 'one_time',
         status varchar(32) NOT NULL DEFAULT 'pending',
         payment_method_id varchar(128) NULL,
@@ -1444,7 +1470,7 @@ function linka_nko_insert_subscription(int $amount, string $donor_name, string $
     return $inserted ? (int) $wpdb->insert_id : null;
 }
 
-function linka_nko_insert_payment(int $amount, string $donor_name, string $donor_email, string $frequency, ?int $subscription_id): ?int
+function linka_nko_insert_payment(int $amount, string $donor_name, string $donor_email, string $frequency, ?int $subscription_id, string $message = ''): ?int
 {
     global $wpdb;
     $tables = linka_nko_donation_tables();
@@ -1457,6 +1483,9 @@ function linka_nko_insert_payment(int $amount, string $donor_name, string $donor
         'currency' => 'RUB',
         'donor_name' => $donor_name,
         'donor_email' => $donor_email,
+        'donation_message' => $message !== '' ? $message : null,
+        'donation_message_consent_at' => $message !== '' ? $now : null,
+        'donation_message_consent_version' => $message !== '' ? LINKA_NKO_DONATION_MESSAGE_CONSENT_VERSION : null,
         'frequency' => $frequency,
         'status' => 'pending',
         'consent_at' => $now,
@@ -1467,7 +1496,7 @@ function linka_nko_insert_payment(int $amount, string $donor_name, string $donor
         'consent_subject_hash' => linka_nko_consent_subject_hash($donor_email),
         'created_at' => $now,
         'updated_at' => $now,
-    ], ['%d', '%s', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s']);
+    ], ['%d', '%s', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s']);
 
     if (!$inserted) {
         return null;
@@ -1839,10 +1868,10 @@ function linka_nko_render_donations_admin_page(): void
 
       <h2>Последние платежи</h2>
       <table class="widefat striped">
-        <thead><tr><th>ID</th><th>Дата</th><th>Сумма</th><th>Периодичность</th><th>Статус</th><th>Жертвователь</th><th>Email</th><th>YooKassa</th><th>Письмо</th></tr></thead>
+        <thead><tr><th>ID</th><th>Дата</th><th>Сумма</th><th>Периодичность</th><th>Статус</th><th>Жертвователь</th><th>Email</th><th>Добрые слова</th><th>YooKassa</th><th>Письмо</th></tr></thead>
         <tbody>
           <?php if ($payments === []) : ?>
-            <tr><td colspan="9">Платежей пока нет.</td></tr>
+            <tr><td colspan="10">Платежей пока нет.</td></tr>
           <?php else : ?>
             <?php foreach ($payments as $payment) : ?>
               <tr>
@@ -1853,6 +1882,7 @@ function linka_nko_render_donations_admin_page(): void
                 <td><?php echo esc_html(linka_nko_payment_status_label((string) $payment->status)); ?></td>
                 <td><?php echo esc_html((string) $payment->donor_name); ?></td>
                 <td><a href="mailto:<?php echo esc_attr((string) $payment->donor_email); ?>"><?php echo esc_html((string) $payment->donor_email); ?></a></td>
+                <td><?php echo nl2br(esc_html((string) $payment->donation_message)); ?></td>
                 <td><?php echo esc_html((string) $payment->yookassa_payment_id); ?></td>
                 <td><?php echo esc_html((string) $payment->thank_you_email_sent_at !== '' ? linka_nko_format_admin_datetime((string) $payment->thank_you_email_sent_at) : ''); ?></td>
               </tr>
