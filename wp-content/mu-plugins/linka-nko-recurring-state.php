@@ -7,10 +7,22 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-function linka_nko_recurring_state_can_claim_charge(array $state, string $now): bool
+function linka_nko_recurring_cutoff(string $value): ?string
+{
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $value, new DateTimeZone('UTC'));
+    $errors = DateTimeImmutable::getLastErrors();
+    if ($date === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0)) || $date->format('Y-m-d H:i:s') !== $value) {
+        return null;
+    }
+
+    return $value;
+}
+
+function linka_nko_recurring_state_can_claim_charge(array $state, string $now, ?string $cutoff = null): bool
 {
     return ($state['status'] ?? '') === 'active'
         && ($state['next_charge_at'] ?? '') !== ''
+        && ($cutoff === null || $state['next_charge_at'] >= $cutoff)
         && $state['next_charge_at'] <= $now
         && (($state['charge_lease_until'] ?? '') === '' || $state['charge_lease_until'] <= $now);
 }

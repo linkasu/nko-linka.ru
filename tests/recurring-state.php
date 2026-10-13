@@ -21,6 +21,14 @@ $active = [
     'payment_method_id' => 'saved-method',
 ];
 recurring_assert(linka_nko_recurring_state_can_claim_charge($active, $now), 'Due active subscription was not claimable');
+recurring_assert(linka_nko_recurring_cutoff('2026-07-18 00:00:00') === '2026-07-18 00:00:00', 'Valid UTC cutoff was rejected');
+recurring_assert(linka_nko_recurring_cutoff('2026-02-30 00:00:00') === null, 'Invalid UTC cutoff was accepted');
+recurring_assert(!linka_nko_recurring_state_can_claim_charge($active, $now, '2026-07-18 12:00:00'), 'Pre-cutoff subscription was claimable');
+$active['next_charge_at'] = '2026-07-18 12:00:00';
+recurring_assert(linka_nko_recurring_state_can_claim_charge($active, $now, '2026-07-18 12:00:00'), 'Subscription at cutoff boundary was not claimable');
+$active['next_charge_at'] = '2026-07-18 12:01:00';
+recurring_assert(linka_nko_recurring_state_can_claim_charge($active, '2026-07-18 12:02:00', '2026-07-18 12:00:00'), 'Post-cutoff due subscription was not claimable');
+$active['next_charge_at'] = '2026-07-18 11:59:00';
 
 $claimed = linka_nko_recurring_state_claim_charge($active, 'claim-a', '2026-07-18 12:05:00', 41);
 recurring_assert(is_array($claimed), 'Charge claim failed');

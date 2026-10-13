@@ -3,6 +3,8 @@
  * Private YooKassa registry archive and monthly accounting exports.
  */
 
+require_once __DIR__ . '/linka-nko-internal-auth.php';
+
 const LINKA_NKO_REGISTRY_SCHEMA_VERSION = '20260713-3';
 const LINKA_NKO_REGISTRY_IMPORT_PATH = '/internal/import-registries';
 const LINKA_NKO_REGISTRY_MAX_FILE_SIZE = 5242880;
@@ -339,6 +341,7 @@ function linka_nko_run_internal_registry_import(): void
     if ($path !== LINKA_NKO_REGISTRY_IMPORT_PATH) {
         return;
     }
+    linka_nko_require_internal_auth();
     if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
         wp_send_json(['ok' => false, 'error' => 'method not allowed'], 405);
     }

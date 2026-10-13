@@ -2,6 +2,24 @@
 
 define('ABSPATH', __DIR__ . '/');
 
+final class InternalAuthJsonResponse extends RuntimeException
+{
+    public function __construct(public array $payload, public int $status)
+    {
+        parent::__construct('JSON response');
+    }
+}
+
+function wp_send_json(array $payload, int $status): void
+{
+    throw new InternalAuthJsonResponse($payload, $status);
+}
+
+function wp_parse_url(string $url, int $component)
+{
+    return parse_url($url, $component);
+}
+
 function add_action(): void
 {
 }
@@ -192,6 +210,46 @@ donations_security_assert($headers['Idempotency-Key'] === $batch_id && $headers[
 donations_security_assert($headers['X-Linka-Signature'] === $expected_signature && !str_contains($headers['X-Linka-Signature'], '='), 'Fundraising HMAC does not match LINKA-HMAC-V2');
 
 $donations_source = file_get_contents(dirname(__DIR__) . '/wp-content/mu-plugins/linka-nko-donations.php');
+$auth_source = file_get_contents(dirname(__DIR__) . '/wp-content/mu-plugins/linka-nko-internal-auth.php');
+putenv('LINKA_NKO_INTERNAL_AUTH_MODE=bearer');
+putenv('LINKA_NKO_INTERNAL_KEY=' . str_repeat('k', 32));
+unset($_SERVER['HTTP_AUTHORIZATION']);
+donations_security_assert(!linka_nko_internal_request_authorized(), 'Missing bearer token was accepted');
+$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer wrong';
+donations_security_assert(!linka_nko_internal_request_authorized(), 'Invalid bearer token was accepted');
+$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . str_repeat('k', 32);
+donations_security_assert(linka_nko_internal_request_authorized(), 'Valid bearer token was rejected');
+putenv('LINKA_NKO_INTERNAL_KEY=too-short');
+$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer too-short';
+donations_security_assert(!linka_nko_internal_request_authorized(), 'Weak internal key was accepted');
+putenv('LINKA_NKO_INTERNAL_AUTH_MODE=unknown');
+donations_security_assert(!linka_nko_internal_request_authorized(), 'Unknown internal auth mode was accepted');
+putenv('LINKA_NKO_INTERNAL_AUTH_MODE=bearer');
+putenv('LINKA_NKO_INTERNAL_KEY=' . str_repeat('k', 32));
+unset($_SERVER['HTTP_AUTHORIZATION']);
+$_SERVER['REQUEST_METHOD'] = 'POST';
+foreach (['/' . LINKA_NKO_RECURRING_INTERNAL_PATH => 'recurring runner', '/' . LINKA_NKO_DONATION_SYNC_INTERNAL_PATH => 'donation sync'] as $path => $label) {
+    $_SERVER['REQUEST_URI'] = $path;
+    try {
+        $path === '/' . LINKA_NKO_RECURRING_INTERNAL_PATH
+            ? linka_nko_run_internal_recurring_path()
+            : linka_nko_run_internal_donation_sync_path();
+        donations_security_assert(false, ucfirst($label) . ' continued without bearer token');
+    } catch (InternalAuthJsonResponse $response) {
+        donations_security_assert($response->status === 401 && ($response->payload['error'] ?? '') === 'unauthorized', ucfirst($label) . ' did not reject missing bearer token');
+    }
+}
+putenv('LINKA_NKO_INTERNAL_AUTH_MODE');
+putenv('LINKA_NKO_INTERNAL_KEY');
+unset($_SERVER['HTTP_AUTHORIZATION'], $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
+donations_security_assert(linka_nko_internal_request_authorized(), 'Default IAM-compatible mode requires application bearer auth');
+donations_security_assert(is_string($auth_source) && str_contains($auth_source, 'strlen($key) < 32'), 'Weak internal key is not rejected');
+$recurring_route = substr($donations_source, strpos($donations_source, 'function linka_nko_run_internal_recurring_path'), strpos($donations_source, 'function linka_nko_run_internal_donation_sync_path') - strpos($donations_source, 'function linka_nko_run_internal_recurring_path'));
+$sync_route = substr($donations_source, strpos($donations_source, 'function linka_nko_run_internal_donation_sync_path'), strpos($donations_source, 'function linka_nko_sync_successful_payments_from_yookassa') - strpos($donations_source, 'function linka_nko_run_internal_donation_sync_path'));
+donations_security_assert(strpos($recurring_route, 'linka_nko_require_internal_auth') < strpos($recurring_route, 'linka_nko_process_due_subscriptions'), 'Recurring runner authenticates after writes');
+donations_security_assert(strpos($sync_route, 'linka_nko_require_internal_auth') < strpos($sync_route, 'linka_nko_sync_successful_payments_from_yookassa'), 'Donation sync authenticates after writes');
+donations_security_assert(str_contains($donations_source, 'payments.created_at >= %s') && str_contains($donations_source, 'payments.created_at < %s'), 'Future-only charging recovery cutoff is incomplete');
+donations_security_assert(str_contains($donations_source, "status = 'active' AND next_charge_at = %s{\$cutoff_sql}"), 'Future-only cutoff is missing from the atomic charge claim');
 $schema_start = is_string($donations_source) ? strpos($donations_source, "dbDelta(\"CREATE TABLE {\$tables['fundraising_outbox']}") : false;
 $schema_end = $schema_start === false || !is_string($donations_source) ? false : strpos($donations_source, '");', $schema_start);
 $outbox_schema = $schema_start === false || $schema_end === false || !is_string($donations_source) ? '' : substr($donations_source, $schema_start, $schema_end - $schema_start);
@@ -209,6 +267,7 @@ $activation_end = $activation_start === false || !is_string($donations_source) ?
 $activation_delivery = $activation_start === false || $activation_end === false || !is_string($donations_source) ? '' : substr($donations_source, $activation_start, $activation_end - $activation_start);
 $activation_enqueue = strpos($activation_delivery, 'linka_nko_enqueue_subscription_activated_fundraising_event');
 donations_security_assert($activation_enqueue !== false && $activation_enqueue < strrpos($activation_delivery, 'COMMIT') && str_contains($activation_delivery, 'ROLLBACK'), 'Recurring activation event must be recorded before its transaction commits');
+donations_security_assert(strpos($donations_source, 'linka_nko_get_pending_activation_subscriptions') < strpos($donations_source, "getenv('LINKA_NKO_FUTURE_ONLY')"), 'Future-only cutoff blocks activation email processing');
 
 global $wpdb;
 $wpdb = new DonationsSecurityWpdb();

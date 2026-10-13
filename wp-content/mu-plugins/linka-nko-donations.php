@@ -5,6 +5,7 @@
 
 require_once __DIR__ . '/linka-nko-recurring-state.php';
 require_once __DIR__ . '/linka-nko-retention.php';
+require_once __DIR__ . '/linka-nko-internal-auth.php';
 
 const LINKA_NKO_DONATION_AMOUNTS = [500, 1000, 3000, 5000];
 const LINKA_NKO_DONATION_MIN_AMOUNT = 100;
@@ -432,6 +433,8 @@ function linka_nko_run_internal_recurring_path(): void
         return;
     }
 
+    linka_nko_require_internal_auth();
+
     if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
         wp_send_json(['ok' => false, 'error' => 'method not allowed'], 405);
     }
@@ -448,7 +451,7 @@ function linka_nko_run_internal_recurring_path(): void
 
     $result = linka_nko_process_due_subscriptions();
     $result['fundraising_outbox'] = linka_nko_drain_fundraising_outbox();
-    wp_send_json($result, 200);
+    wp_send_json($result, !empty($result['ok']) ? 200 : 503);
 }
 
 function linka_nko_run_internal_donation_sync_path(): void
@@ -457,6 +460,8 @@ function linka_nko_run_internal_donation_sync_path(): void
     if ($path !== '/' . LINKA_NKO_DONATION_SYNC_INTERNAL_PATH) {
         return;
     }
+
+    linka_nko_require_internal_auth();
 
     if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
         wp_send_json(['ok' => false, 'error' => 'method not allowed'], 405);
@@ -549,9 +554,33 @@ function linka_nko_process_due_subscriptions(): array
         }
     }
 
+    $cutoff = null;
+    if ((string) getenv('LINKA_NKO_FUTURE_ONLY') === '1') {
+        $cutoff = linka_nko_recurring_cutoff((string) get_option('linka_nko_recurring_cutover_at', ''));
+        if ($cutoff === null) {
+            return [
+                'ok' => false,
+                'enabled' => true,
+                'error' => 'recurring_cutover_unavailable',
+                'activation_delivered' => $activation_delivered,
+                'activation_failed' => $activation_failed,
+                'management_tokens_expired' => linka_nko_expire_canceled_management_tokens(),
+                'skipped_before_cutoff' => 0,
+                'skipped_charging_attempts' => 0,
+                'recovered' => 0,
+                'recovery_failed' => 0,
+                'processed' => 0,
+                'failed' => 0,
+            ];
+        }
+    }
+
+    $skipped_before_cutoff = $cutoff === null ? 0 : linka_nko_count_pre_cutoff_due_subscriptions($cutoff, 1000);
+    $skipped_charging_attempts = $cutoff === null ? 0 : linka_nko_count_pre_cutoff_charging_attempts($cutoff, 1000);
+
     $recovered = 0;
     $recovery_failed = 0;
-    foreach (linka_nko_get_charging_subscriptions(20) as $subscription) {
+    foreach (linka_nko_get_charging_subscriptions(20, $cutoff) as $subscription) {
         if (linka_nko_recover_charging_subscription($subscription)) {
             $recovered++;
         } else {
@@ -561,8 +590,8 @@ function linka_nko_process_due_subscriptions(): array
 
     $processed = 0;
     $failed = 0;
-    foreach (linka_nko_get_due_subscriptions(20) as $subscription) {
-        $result = linka_nko_charge_subscription($subscription);
+    foreach (linka_nko_get_due_subscriptions(20, $cutoff) as $subscription) {
+        $result = linka_nko_charge_subscription($subscription, $cutoff);
         if ($result) {
             $processed++;
         } else {
@@ -576,6 +605,8 @@ function linka_nko_process_due_subscriptions(): array
         'activation_delivered' => $activation_delivered,
         'activation_failed' => $activation_failed,
         'management_tokens_expired' => linka_nko_expire_canceled_management_tokens(),
+        'skipped_before_cutoff' => $skipped_before_cutoff,
+        'skipped_charging_attempts' => $skipped_charging_attempts,
         'recovered' => $recovered,
         'recovery_failed' => $recovery_failed,
         'processed' => $processed,
@@ -583,9 +614,9 @@ function linka_nko_process_due_subscriptions(): array
     ];
 }
 
-function linka_nko_charge_subscription(object $subscription): bool
+function linka_nko_charge_subscription(object $subscription, ?string $cutoff = null): bool
 {
-    $claim = linka_nko_prepare_subscription_charge($subscription);
+    $claim = linka_nko_prepare_subscription_charge($subscription, $cutoff);
     if ($claim === null) {
         return false;
     }
@@ -2335,26 +2366,59 @@ function linka_nko_mask_email(string $email): string
     return $prefix . str_repeat('*', max(2, strlen($local) - strlen($prefix))) . '@' . $domain;
 }
 
-function linka_nko_get_due_subscriptions(int $limit): array
+function linka_nko_get_due_subscriptions(int $limit, ?string $cutoff = null): array
 {
     global $wpdb;
     $tables = linka_nko_donation_tables();
 
+    $cutoff_sql = $cutoff === null ? '' : $wpdb->prepare(' AND next_charge_at >= %s', $cutoff);
     return $wpdb->get_results($wpdb->prepare(
-        "SELECT * FROM {$tables['subscriptions']} WHERE status = 'active' AND next_charge_at IS NOT NULL AND next_charge_at <= %s ORDER BY next_charge_at ASC LIMIT %d",
+        "SELECT * FROM {$tables['subscriptions']} WHERE status = 'active' AND next_charge_at IS NOT NULL{$cutoff_sql} AND next_charge_at <= %s ORDER BY next_charge_at ASC LIMIT %d",
         linka_nko_utc_now(),
         $limit
     ));
 }
 
-function linka_nko_get_charging_subscriptions(int $limit): array
+function linka_nko_get_charging_subscriptions(int $limit, ?string $cutoff = null): array
 {
     global $wpdb;
     $tables = linka_nko_donation_tables();
 
+    if ($cutoff === null) {
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$tables['subscriptions']} WHERE status = 'charging' AND (charge_lease_until IS NULL OR charge_lease_until <= %s) ORDER BY COALESCE(charge_lease_until, updated_at) ASC LIMIT %d",
+            linka_nko_utc_now(),
+            $limit
+        ));
+    }
+
     return $wpdb->get_results($wpdb->prepare(
-        "SELECT * FROM {$tables['subscriptions']} WHERE status = 'charging' AND (charge_lease_until IS NULL OR charge_lease_until <= %s) ORDER BY COALESCE(charge_lease_until, updated_at) ASC LIMIT %d",
+        "SELECT subscriptions.* FROM {$tables['subscriptions']} subscriptions INNER JOIN {$tables['payments']} payments ON payments.id = subscriptions.last_payment_id WHERE subscriptions.status = 'charging' AND payments.created_at >= %s AND (subscriptions.charge_lease_until IS NULL OR subscriptions.charge_lease_until <= %s) ORDER BY COALESCE(subscriptions.charge_lease_until, subscriptions.updated_at) ASC LIMIT %d",
+        $cutoff,
         linka_nko_utc_now(),
+        $limit
+    ));
+}
+
+function linka_nko_count_pre_cutoff_due_subscriptions(string $cutoff, int $limit): int
+{
+    global $wpdb;
+    $tables = linka_nko_donation_tables();
+    return (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM (SELECT id FROM {$tables['subscriptions']} WHERE status = 'active' AND next_charge_at IS NOT NULL AND next_charge_at < %s AND next_charge_at <= %s LIMIT %d) skipped",
+        $cutoff,
+        linka_nko_utc_now(),
+        $limit
+    ));
+}
+
+function linka_nko_count_pre_cutoff_charging_attempts(string $cutoff, int $limit): int
+{
+    global $wpdb;
+    $tables = linka_nko_donation_tables();
+    return (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM (SELECT subscriptions.id FROM {$tables['subscriptions']} subscriptions LEFT JOIN {$tables['payments']} payments ON payments.id = subscriptions.last_payment_id WHERE subscriptions.status = 'charging' AND (payments.created_at IS NULL OR payments.created_at < %s) LIMIT %d) skipped",
+        $cutoff,
         $limit
     ));
 }
@@ -2371,22 +2435,23 @@ function linka_nko_get_pending_activation_subscriptions(int $limit): array
     ));
 }
 
-function linka_nko_prepare_subscription_charge(object $subscription): ?array
+function linka_nko_prepare_subscription_charge(object $subscription, ?string $cutoff = null): ?array
 {
     global $wpdb;
     $tables = linka_nko_donation_tables();
     $subscription_id = (int) $subscription->id;
     $next_charge_at = (string) $subscription->next_charge_at;
     $now = linka_nko_utc_now();
-    if ($subscription_id <= 0 || $next_charge_at === '' || !linka_nko_recurring_state_can_claim_charge((array) $subscription, $now)) {
+    if ($subscription_id <= 0 || $next_charge_at === '' || !linka_nko_recurring_state_can_claim_charge((array) $subscription, $now, $cutoff)) {
         return null;
     }
 
     $claim_token = wp_generate_uuid4();
     $lease_until = linka_nko_utc_after(LINKA_NKO_CHARGE_LEASE_SECONDS);
     $wpdb->query('START TRANSACTION');
+    $cutoff_sql = $cutoff === null ? '' : $wpdb->prepare(' AND next_charge_at >= %s', $cutoff);
     $claimed = $wpdb->query($wpdb->prepare(
-        "UPDATE {$tables['subscriptions']} SET status = 'charging', charge_claim_token = %s, charge_lease_until = %s, updated_at = %s WHERE id = %d AND status = 'active' AND next_charge_at = %s AND next_charge_at <= %s AND (charge_lease_until IS NULL OR charge_lease_until <= %s)",
+        "UPDATE {$tables['subscriptions']} SET status = 'charging', charge_claim_token = %s, charge_lease_until = %s, updated_at = %s WHERE id = %d AND status = 'active' AND next_charge_at = %s{$cutoff_sql} AND next_charge_at <= %s AND (charge_lease_until IS NULL OR charge_lease_until <= %s)",
         $claim_token,
         $lease_until,
         $now,

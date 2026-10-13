@@ -111,6 +111,15 @@ jobs:
             type=ref,event=branch
             type=ref,event=tag
 
+      - name: Publish tested image to GHCR for the standby VM
+        if: github.event_name != 'pull_request'
+        run: |
+          printf '%s' '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io --username '${{ github.actor }}' --password-stdin
+          image="ghcr.io/linkasu/nko-linka-wordpress:${{ github.sha }}"
+          docker tag "${LOCAL_IMAGE}" "$image"
+          docker push "$image"
+          docker buildx imagetools inspect "$image" --format '{{.Manifest.Digest}}' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Login to Yandex Container Registry
         if: github.event_name != 'pull_request'
         run: |

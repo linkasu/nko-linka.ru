@@ -12,6 +12,24 @@ final class WP_Error
     }
 }
 
+final class RegistryInternalAuthJsonResponse extends RuntimeException
+{
+    public function __construct(public array $payload, public int $status)
+    {
+        parent::__construct('JSON response');
+    }
+}
+
+function wp_send_json(array $payload, int $status): void
+{
+    throw new RegistryInternalAuthJsonResponse($payload, $status);
+}
+
+function wp_parse_url(string $url, int $component)
+{
+    return parse_url($url, $component);
+}
+
 final class WP_Role
 {
     public function __construct(public array $capabilities = [])
@@ -71,6 +89,26 @@ function assert_same($expected, $actual, string $message): void
 }
 
 linka_nko_register_registry_roles();
+putenv('LINKA_NKO_INTERNAL_AUTH_MODE=bearer');
+putenv('LINKA_NKO_INTERNAL_KEY=' . str_repeat('k', 32));
+$_SERVER['REQUEST_URI'] = LINKA_NKO_REGISTRY_IMPORT_PATH;
+$_SERVER['REQUEST_METHOD'] = 'POST';
+unset($_SERVER['HTTP_AUTHORIZATION']);
+try {
+    linka_nko_run_internal_registry_import();
+    assert_same(true, false, 'Registry import continued without bearer token');
+} catch (RegistryInternalAuthJsonResponse $response) {
+    assert_same(401, $response->status, 'Registry import bearer rejection status');
+    assert_same('unauthorized', $response->payload['error'] ?? '', 'Registry import bearer rejection payload');
+}
+putenv('LINKA_NKO_INTERNAL_AUTH_MODE');
+putenv('LINKA_NKO_INTERNAL_KEY');
+unset($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
+$registry_source = file_get_contents($plugin);
+$internal_import_start = is_string($registry_source) ? strpos($registry_source, 'function linka_nko_run_internal_registry_import') : false;
+$internal_import_end = $internal_import_start === false || !is_string($registry_source) ? false : strpos($registry_source, 'function linka_nko_store_registry', $internal_import_start);
+$internal_import = $internal_import_start === false || $internal_import_end === false ? '' : substr($registry_source, $internal_import_start, $internal_import_end - $internal_import_start);
+assert_same(true, strpos($internal_import, 'linka_nko_require_internal_auth') < strpos($internal_import, 'linka_nko_import_registries_from_mail'), 'Registry import authenticates before writes');
 assert_same(true, get_role('administrator')->has_cap(LINKA_NKO_REGISTRY_CAPABILITY), 'Administrator registry capability');
 assert_same(true, get_role(LINKA_NKO_REGISTRY_ACCOUNTANT_ROLE)->has_cap('read'), 'Accountant read capability');
 assert_same(true, get_role(LINKA_NKO_REGISTRY_ACCOUNTANT_ROLE)->has_cap(LINKA_NKO_REGISTRY_CAPABILITY), 'Accountant registry capability');
