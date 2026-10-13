@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh nkolinka.ru donation total hourly
+
+[Timer]
+OnCalendar=*-*-* *:07:00 UTC
+Persistent=true
+Unit=linka-wordpress-donation-sync.service
+
+[Install]
+WantedBy=timers.target

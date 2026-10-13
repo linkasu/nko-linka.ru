@@ -1,0 +1,10 @@
+[Unit]
+Description=Run future nkolinka.ru recurring donations every 15 minutes
+
+[Timer]
+OnCalendar=*-*-* *:0/15:00 UTC
+Persistent=true
+Unit=linka-wordpress-recurring.service
+
+[Install]
+WantedBy=timers.target

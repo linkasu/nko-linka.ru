@@ -1,0 +1,11 @@
+[Unit]
+Description=Future-only nkolinka.ru recurring donations
+Requires=linka-wordpress.service
+After=linka-wordpress.service
+ConditionPathExists=/etc/linka/site-internal.curl
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/curl --config /etc/linka/site-internal.curl --silent --show-error --fail-with-body --max-time 240 --request POST http://127.0.0.1:8090/internal/run-recurring-donations
+TimeoutStartSec=250

@@ -1,0 +1,11 @@
+[Unit]
+Description=Import nkolinka.ru daily YooKassa registries
+Requires=linka-wordpress.service
+After=linka-wordpress.service
+ConditionPathExists=/etc/linka/site-internal.curl
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/curl --config /etc/linka/site-internal.curl --silent --show-error --fail-with-body --max-time 240 --request POST http://127.0.0.1:8090/internal/import-registries
+TimeoutStartSec=250

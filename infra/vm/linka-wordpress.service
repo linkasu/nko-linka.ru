@@ -1,0 +1,24 @@
+[Unit]
+Description=nkolinka.ru WordPress on the CRM VM
+Requires=docker.service linka-site-uploads.service
+BindsTo=linka-site-uploads.service
+After=network-online.target docker.service linka-site-uploads.service
+Wants=network-online.target
+ConditionPathExists=/etc/linka/site.env
+ConditionPathExists=/etc/linka/site-image.ref
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStartPre=/usr/bin/mountpoint -q /srv/linka/site-uploads
+ExecStartPre=-/usr/bin/docker rm -f linka-wordpress-vm
+ExecStart=/bin/sh -ec 'image=$$(cat /etc/linka/site-image.ref); case "$$image" in ghcr.io/linkasu/nko-linka-wordpress@sha256:*) ;; *) exit 1 ;; esac; /usr/bin/docker image inspect "$$image" >/dev/null; exec /usr/bin/docker run --pull=never --rm --name linka-wordpress-vm --memory 2g --cpus 1 --pids-limit 512 --security-opt no-new-privileges --env-file /etc/linka/site.env -p 127.0.0.1:8090:8080 --mount type=bind,source=/srv/linka/site-uploads,target=/var/www/html/wp-content/uploads "$$image"'
+ExecStop=/usr/bin/docker stop --time 30 linka-wordpress-vm
+Restart=always
+RestartSec=5
+TimeoutStartSec=90
+TimeoutStopSec=65
+
+[Install]
+WantedBy=multi-user.target

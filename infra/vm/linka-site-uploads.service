@@ -1,0 +1,24 @@
+[Unit]
+Description=Private Object Storage mount for nkolinka.ru WordPress uploads
+Wants=network-online.target
+Wants=linka-wordpress.service
+After=network-online.target
+Before=linka-wordpress.service
+ConditionPathExists=/etc/linka/site-uploads.rclone.conf
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/bin/rclone mount site-uploads:nko-linka-ru-uploads /srv/linka/site-uploads --config /etc/linka/site-uploads.rclone.conf --allow-other --uid 33 --gid 33 --umask 0027 --vfs-cache-mode writes --vfs-cache-max-size 512M --vfs-write-back 0s --cache-dir /var/cache/linka-site-uploads --dir-cache-time 30s --poll-interval 0 --log-level INFO
+ExecStartPost=/bin/sh -ec 'for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do mountpoint -q /srv/linka/site-uploads && exit 0; sleep 1; done; exit 1'
+ExecStop=/usr/bin/fusermount3 -uz /srv/linka/site-uploads
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target

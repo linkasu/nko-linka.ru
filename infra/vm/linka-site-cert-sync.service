@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh managed nkolinka.ru certificate on the CRM VM
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/usr/local/libexec/vm-cert-sync.py
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/libexec/vm-cert-sync.py fpqfb4bbj47ppclem208 nkolinka.ru /etc/linka/site-tls
+TimeoutStartSec=60
+NoNewPrivileges=true

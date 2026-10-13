@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh the managed nkolinka.ru certificate twice daily
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=12h
+Persistent=true
+Unit=linka-site-cert-sync.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,15 @@
+nkolinka.ru {
+	tls /etc/linka/site-tls/current/fullchain.pem /etc/linka/site-tls/current/private-key.pem
+
+	@internal path /internal /internal/*
+	respond @internal 404
+
+	@social_price path /documents/social-services-price-list-order-6-2026-09-18.pdf
+	redir @social_price https://storage.yandexcloud.net/nko-linka-ru-uploads/documents/social-services-price-list-order-6-2026-09-18.pdf 302
+
+	reverse_proxy 127.0.0.1:8090 {
+		header_up Host {host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto https
+	}
+}
