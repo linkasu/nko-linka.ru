@@ -24,6 +24,7 @@ if command -v php >/dev/null 2>&1; then
   php infra/private-network/validate-config.php --check-template infra/private-network/network.env.example infra/mariadb/.env.example
   php tests/readiness.php
   php tests/source-policy.php
+  php tests/consultation-entry.php
   php tests/recurring-state.php
   php tests/donations-security.php
   php tests/retention.php

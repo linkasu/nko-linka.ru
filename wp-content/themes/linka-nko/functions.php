@@ -15,6 +15,14 @@ add_action('wp_enqueue_scripts', static function (): void {
     wp_enqueue_style('linka-nko-style', get_stylesheet_uri(), [], wp_get_theme()->get('Version'));
 });
 
+add_filter('wp_nav_menu_items', static function (string $items, $args): string {
+    if ($args->theme_location !== 'primary') {
+        return $items;
+    }
+
+    return '<li><a href="' . esc_url(home_url('/#consultations')) . '">Консультации</a></li>' . $items;
+}, 10, 2);
+
 add_action('wp_head', static function (): void {
     $description = '';
     if (is_front_page()) {

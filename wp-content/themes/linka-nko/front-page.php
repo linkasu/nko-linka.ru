@@ -10,6 +10,16 @@
       </div>
     </div>
   </section>
+  <section class="content" id="consultations" aria-labelledby="consultations-title">
+    <div class="wrap">
+      <div class="card">
+        <h2 id="consultations-title">Консультации по общению и доступной среде</h2>
+        <p>Поможем разобраться, какие способы общения и инструменты подойдут в вашей ситуации. Расскажите о своём запросе в форме заявки.</p>
+        <p>Консультации платные. Заявка подаётся после подтверждения почты и не означает бронирование времени.</p>
+        <a class="button" href="https://crm.nkolinka.ru/apply">Подать заявку на консультацию</a>
+      </div>
+    </div>
+  </section>
   <section class="content">
     <div class="wrap card-grid">
       <article class="card">
