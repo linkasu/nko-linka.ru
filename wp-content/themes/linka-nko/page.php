@@ -7,6 +7,9 @@
         echo '<article>';
         echo '<h1>' . esc_html(get_the_title()) . '</h1>';
         the_content();
+        if (is_page(['about', 'programs', 'looks', 'type', 'play'])) {
+            get_template_part('open-source');
+        }
         echo '</article>';
     }
     ?>

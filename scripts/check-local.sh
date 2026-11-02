@@ -10,6 +10,7 @@ if command -v php >/dev/null 2>&1; then
   php -l wp-content/themes/linka-nko/functions.php
   php -l wp-content/themes/linka-nko/header.php
   php -l wp-content/themes/linka-nko/footer.php
+  php -l wp-content/themes/linka-nko/open-source.php
   php -l wp-content/themes/linka-nko/front-page.php
   php -l wp-content/themes/linka-nko/page.php
   php -l wp-content/themes/linka-nko/index.php
@@ -24,6 +25,7 @@ if command -v php >/dev/null 2>&1; then
   php infra/private-network/validate-config.php --check-template infra/private-network/network.env.example infra/mariadb/.env.example
   php tests/readiness.php
   php tests/source-policy.php
+  php tests/open-source-links.php
   php tests/recurring-state.php
   php tests/donations-security.php
   php tests/retention.php
