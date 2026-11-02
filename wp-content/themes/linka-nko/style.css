@@ -2,7 +2,7 @@
 Theme Name: Linka NKO
 Author: ANO Linka
 Description: Official WordPress theme for nko-linka.ru.
-Version: 0.1.3
+Version: 0.1.4
 Text Domain: linka-nko
 */
 
@@ -37,6 +37,14 @@ a:focus { outline: 3px solid var(--linka-green); outline-offset: 3px; }
 }
 
 .site-footer { border-top: 1px solid var(--linka-border); border-bottom: 0; }
+
+.open-source a,
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 0;
+}
 
 .wrap {
   width: min(1120px, calc(100% - 32px));

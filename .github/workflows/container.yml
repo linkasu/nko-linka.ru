@@ -93,6 +93,11 @@ jobs:
             -v "${{ github.workspace }}:/workspace:ro" \
             --workdir /workspace \
             ${{ env.LOCAL_IMAGE }} \
+            php tests/open-source-links.php
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace:ro" \
+            --workdir /workspace \
+            ${{ env.LOCAL_IMAGE }} \
             php tests/private-network-config.php
           docker run --rm \
             -v "${{ github.workspace }}:/workspace:ro" \
