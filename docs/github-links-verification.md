@@ -15,7 +15,23 @@
 
 ## Открытые ограничения
 
-- Screenshot write в repository worktree отклонён Playwright root guard. Файлы **не скопированы** за allowed roots, roots не расширялись. Публичные screenshot-вложения в PR пока отсутствуют; это незакрытая часть acceptance, а не основание обходить защиту.
+- При первоначальной проверке screenshot write в repository worktree был отклонён Playwright root guard. Та операция не повторялась, файлы за allowed roots не копировались. Свежие скриншоты при повторной проверке сохранены штатным MCP в текущем workspace; см. ниже.
 - Не проверены полный WordPress runtime, screen reader и реальный production-контент с этой версией темы. Текущий публичный `/programs/` прочитан только для подтверждения slug дочерних страниц; он не содержит новые изменения.
 - Локальный preview сначала не стартовал на занятом 18081; существующий процесс не трогали, для собственного временного preview использован 18573. Его вкладка/процесс закрываются после проверки.
-- PR только draft. CI, merge и deployment сообщаются отдельно по фактическому результату; approval, merge и production rollout не выполнялись.
+- Цель публикации — только draft PR. CI, merge и deployment сообщаются отдельно по фактическому результату; approval, merge и production rollout не выполнялись.
+
+## Повторная проверка 2 ноября 2026, 11:38–11:40 UTC
+
+- `php tests/open-source-links.php` и `git diff --check HEAD^ HEAD` — PASS. Код реализации `cc95d0c` не изменён; добавлены только доказательства проверки.
+- GitHub API повторно подтвердил существование организации и шести целевых репозиториев: все public, nonempty, not archived.
+- Свежая локальная theme-only fixture загружает реальные шаблоны темы и CSS, подменяя WordPress API. Синтетическое содержимое явно помечено на скриншотах; это не проверка развёрнутого WordPress.
+- Chromium, 1440×900 и 390×844: `scrollWidth === innerWidth`; десять ссылок блока/футера высотой минимум 44 px; Tab достигает GitHub, focus outline solid 3 px / offset 3 px. Проверена точная матрица исходников на about/looks/type/play и сохранение двух hero CTA главной.
+- Переход через ссылку футера на `/about/#open-source` — PASS. Первый click получил timeout при `document.visibilityState === 'hidden'`; после `bringToFront()` обычный click прошёл, без изменения кода или принудительного клика.
+- Скриншоты созданы нативным screenshot-инструментом в разрешённом текущем workspace, просмотрены и скопированы внутри того же workspace. Логи браузера не публикуются.
+
+### Скриншоты темы
+
+- [Программы, desktop 1440 px](screenshots/github-links/programs-desktop.png).
+- [Программы, mobile 390 px, клавиатурный фокус](screenshots/github-links/programs-mobile.png).
+- [О Линке, desktop](screenshots/github-links/about-desktop.png).
+- [Главная, mobile](screenshots/github-links/home-mobile.png).
